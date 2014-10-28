@@ -18,6 +18,7 @@ import akka.util.ByteString
 import akka.util.ByteStringBuilder
 import java.nio.charset.Charset
 import java.nio.charset.MalformedInputException
+import java.nio.charset.CodingErrorAction
 
 /**
  * Testing Network controllers as the following example:
@@ -114,7 +115,11 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
 
     case c @ Connected(remote, local) =>
       {
-        val fs = scala.io.Source.fromFile(filepath,"UTF-8").getLines
+        implicit val codec = scala.io.Codec("UTF-8")
+        codec.onMalformedInput(CodingErrorAction.REPLACE)
+        codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
+        
+        val fs = scala.io.Source.fromFile(filepath).getLines
         val connection = sender
         val handler = context.actorOf(Props(classOf[SimplisticHandler], fs, count, period, connection))
         connection ! Register(handler)
@@ -147,9 +152,10 @@ class SimplisticHandler(fs: Iterator[String], count: Int, period: Int, remote: A
     }
 
     case "sendout" => {
-      //      log.info("sending out")
+      //log.info("sending out")
       val bsb = new ByteStringBuilder()
       var i = 0
+      
       while (fs.hasNext && i < count) {
         bsb.putBytes((fs.next + "\n").getBytes())
         remote ! Write(bsb.result)

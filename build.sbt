@@ -1,6 +1,6 @@
 import AssemblyKeys._
 
-name := "SpatialSparkApp"
+name := "WebUI"
 
 version := "0.1"
 
