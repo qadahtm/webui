@@ -48,6 +48,7 @@ import spray.routing.Directive.pimpApply
 import spray.routing.directives.ParamDefMagnet.apply
 import utils.AppJsonProtocol._
 import utils._
+import spray.json.JsonParser
 
 object Ready
 object SendReady
@@ -520,7 +521,7 @@ class BufferingStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => J
     case SendReady => {
       while (!buffer.isEmpty) {
 //        log.info("About to send "+buffer.size+" responses")
-        val resp = JsObject("type" -> JsString("output"), "data" -> formatSSE(buffer.dequeue))
+        val resp = JsObject("type" -> JsString("output"), "data" -> JsonParser(buffer.dequeue))
         val newChunk = MessageChunk(Helper.createSSE("ping", resp.toString))
         peer ! newChunk.withAck(SendReady)
       }

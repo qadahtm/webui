@@ -109,7 +109,6 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
     case b @ Bound(localAddress) => {
       log.info("Bound to : " + localAddress.toString())
     }
-    // do some logging or setup ...
 
     case CommandFailed(_: Bind) => { context stop self }
 

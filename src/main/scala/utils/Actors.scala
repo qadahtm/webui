@@ -14,6 +14,13 @@ import org.apache.spark.streaming.receiver.ActorHelper
 import akka.actor.ActorRef
 import scala.concurrent.Await
 import akka.actor.Terminated
+import akka.io.Tcp
+import akka.io.IO
+import java.net.InetSocketAddress
+import java.nio.charset.CodingErrorAction
+import akka.util.ByteString
+import akka.util.ByteStringBuilder
+import akka.actor.Props
 
 case class Subscribe(ap: AnyRef)
 case class Unsubscribe(ap: AnyRef)
@@ -111,6 +118,227 @@ class PubSubActor[T] extends Actor with ActorLogging {
       
       
       log.info("Ther actor : "+t+" is terminated")
+    }
+    
+    case msg => {
+      log.error("received a message of type : "+msg.getClass.getName())
+    }
+  }
+}
+
+class NetworkPubSubHandler(remote: ActorRef) extends Actor with ActorLogging {
+
+
+  import Tcp._
+  
+  def receive = {
+    case Received(data) => {       
+      remote ! Write(data) 
+     }
+    case PeerClosed => {
+      log.info("Client Teminated")
+      context stop self
+    }
+
+  }
+}
+
+case class TopicSubscribe(topic:String, ref:AnyRef)
+case class TopicUnsubscribe(topic:String, ref:AnyRef)
+case class TopicForward[T](topic:String, msg: T)
+case class CreateTopic(topicString:String)
+case class DeleteTopic(topicString:String)
+
+class TopicPubSubActor[T](host: String, port: Int) extends Actor with ActorLogging {
+
+  val defaultTopic = "defaultTopic"
+    
+  val localSubs = scala.collection.mutable.Map[String,ArrayBuffer[ActorRef]]()
+  localSubs += (defaultTopic -> ArrayBuffer[ActorRef]())
+  val remoteSubs = scala.collection.mutable.Map[String,ArrayBuffer[ActorRef]]()
+  remoteSubs += (defaultTopic -> ArrayBuffer[ActorRef]())
+  
+  import Tcp._
+  import context.system
+
+  IO(Tcp) ! Bind(self, new InetSocketAddress(host, port))
+  
+  def receive = {
+    
+    case b @ Bound(localAddress) => {
+      log.info("Bound to : " + localAddress.toString())
+    }
+
+    case CommandFailed(_: Bind) => { context stop self }
+
+    case c @ Connected(remote, local) =>
+      {
+        
+        val connection = sender
+        val handler = context.actorOf(Props(classOf[NetworkPubSubHandler],connection))
+        connection ! Register(handler)
+        log.info("Connected to client at : " + remote.toString())
+      }
+    
+    case CreateTopic(t) => {
+      localSubs += (t -> ArrayBuffer[ActorRef]())
+      remoteSubs += (t -> ArrayBuffer[ActorRef]())
+    }
+    
+    case DeleteTopic(t) => {
+      localSubs -= t
+      remoteSubs -= t
+    }
+    case TopicSubscribe(topic,ap) => {
+      
+      ap match {
+        case x: String => {
+          log.info(s"Subscribing Remote actor to topic ($topic): " + ap)
+          val timeout = 100 seconds
+          
+          if (remoteSubs.keySet.contains(topic)){
+          val f = context.actorSelection(x).resolveOne(timeout).mapTo[ActorRef]
+          val aref = Await.result(f, timeout)
+          this.context.watch(aref)
+            remoteSubs(topic) += aref
+          }
+          else{
+            log.warning(sender.toString+s" is trying to subscribe to nonexistent topic ($topic)")
+          }
+          
+        }
+        case x: ActorRef => {
+          log.info(s"Subscribing Local actor to topic ($topic): " + ap)
+          
+          if (localSubs.keySet.contains(topic)){
+            localSubs(topic) += x
+            this.context.watch(x)
+          }
+          else{
+            log.warning(sender.toString+s" is trying to subscribe to nonexistent topic ($topic)")
+          }
+          
+        }
+      }
+
+    }
+    case TopicUnsubscribe(topic,ap) => {
+      
+      //      subscribers.dropWhile(_.eq(ap))
+      ap match {
+        case x: String => {
+          log.info("Unsubscribing Remote from topic ($topic): " + ap)
+          if (remoteSubs.keySet.contains(topic)){
+            val timeout = 100 seconds
+            
+            val f = context.actorSelection(x).resolveOne(timeout).mapTo[ActorRef]
+            val aref = Await.result(f, timeout)
+        	  remoteSubs(topic) -= aref
+          }
+          else{
+            log.warning(sender.toString+s" is trying to unsubscribe from nonexistent topic ($topic)")
+          }
+          
+        }
+        case x: ActorRef => {
+          log.info("Unsubscribing Local from topic ($topic): " + ap)
+          
+          if (localSubs.keySet.contains(topic)){
+            localSubs(topic) -= x
+            this.context.unwatch(x)            
+          }
+          else{
+            log.warning(sender.toString+s" is trying to unsubscribe from nonexistent topic ($topic)")
+          }                   
+        }
+      }
+
+    }
+    
+    
+    case x: TopicForward[T] => {
+      //      log.info("Forwarding a message : "+x.msg)  
+      if (localSubs.keySet.contains(x.topic)){
+    	  if (localSubs(x.topic).size > 0) {
+    		  localSubs(x.topic).foreach(s => {
+	          s ! x.msg
+	        })
+	      }
+      }
+      
+      
+      if (remoteSubs.keySet.contains(x.topic)){
+    	  if (remoteSubs.size > 0) {
+	        //TODO : resolve remote reference first
+	        remoteSubs(x.topic).foreach(s => {
+	          s ! x.msg
+	        })
+	      }
+      }
+
+    }
+    
+    case Subscribe(ap) => {
+      
+      ap match {
+        case x: String => {
+          log.info("Subscribing Remote actor: " + ap)
+          val timeout = 100 seconds
+
+          val f = context.actorSelection(x).resolveOne(timeout).mapTo[ActorRef]
+          val aref = Await.result(f, timeout)
+          this.context.watch(aref)
+
+          remoteSubs(defaultTopic) += aref
+
+        }
+        case x: ActorRef => {
+          log.info("Subscribing Local actor: " + ap)
+          this.context.watch(x)
+          localSubs(defaultTopic) += x
+
+        }
+      }
+
+    }
+    case Unsubscribe(ap) => {
+      
+      //      subscribers.dropWhile(_.eq(ap))
+      ap match {
+        case x: ActorRef => {
+          log.info("UnSubscribing local: " + ap)
+          localSubs(defaultTopic) -= x
+        }
+      }
+
+    }
+    case x: Forward[T] => {
+      //      log.info("Forwarding a message : "+x.msg)      
+      if (localSubs(defaultTopic).size > 0) {
+        localSubs(defaultTopic).foreach(s => {
+          s ! x.msg
+        })
+      }
+
+      if (remoteSubs(defaultTopic).size > 0) {
+        //TODO : resolve remote reference first
+        remoteSubs(defaultTopic).foreach(s => {
+//          this.context.actorSelection(s) ! x.msg
+          s ! x.msg
+        })
+      }
+    }
+
+    case Terminated(t) => {
+      
+      // Works for local subscribers 
+      // If local subscribers are terminated without sending an UnSubscribe message
+      // remove them from all sub lists
+      localSubs.values.foreach(sub => {
+        sub -= t
+      })
+      
+      log.info("Ther actor : "+t+" is terminated and removed from all subs")
     }
     
     case msg => {
