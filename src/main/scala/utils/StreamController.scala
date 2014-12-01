@@ -114,9 +114,9 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
 
     case c @ Connected(remote, local) =>
       {
-        implicit val codec = scala.io.Codec("UTF-8")
-        codec.onMalformedInput(CodingErrorAction.REPLACE)
-        codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
+//        implicit val codec = scala.io.Codec("UTF-8")
+//        codec.onMalformedInput(CodingErrorAction.REPLACE)
+//        codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
         
 //        val fs = scala.io.Source.fromFile(filepath).getLines
         val connection = sender
@@ -138,6 +138,10 @@ class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) ex
 
   implicit val ec = context.system.dispatcher
   implicit val timeout = Timeout(3)
+  
+  implicit val codec = scala.io.Codec("UTF-8")
+  codec.onMalformedInput(CodingErrorAction.REPLACE)
+  codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
   
   var cfs = scala.io.Source.fromFile(fp).getLines
   var iterationCount:Long = 1
