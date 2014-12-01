@@ -118,9 +118,9 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
         codec.onMalformedInput(CodingErrorAction.REPLACE)
         codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
         
-        val fs = scala.io.Source.fromFile(filepath).getLines
+//        val fs = scala.io.Source.fromFile(filepath).getLines
         val connection = sender
-        val handler = context.actorOf(Props(classOf[SimplisticHandler], fs, count, period, connection))
+        val handler = context.actorOf(Props(classOf[SimplisticHandler], filepath, count, period, connection))
         connection ! Register(handler)
         log.info("Connected to client at : " + remote.toString())
       }
@@ -130,7 +130,7 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
 
 }
 
-class SimplisticHandler(fs: Iterator[String], count: Int, period: Int, remote: ActorRef) extends Actor with ActorLogging {
+class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) extends Actor with ActorLogging {
 
   //  lazy val fs = scala.io.Source.fromFile(filepath).getLines
   //  fs.next // skipping hte first line
@@ -138,33 +138,57 @@ class SimplisticHandler(fs: Iterator[String], count: Int, period: Int, remote: A
 
   implicit val ec = context.system.dispatcher
   implicit val timeout = Timeout(3)
+  
+  var cfs = scala.io.Source.fromFile(fp).getLines
+  var iterationCount:Long = 1
+  var tupleSentCount:Int = 0
+  var tobeSent:Int = 0
+  
   val s = context.system.scheduler.schedule(0 seconds, period seconds) {
     self ! "sendout"
+  }
+  
+  def sendOutData(ccount:Int) = {
+    val bsb = new ByteStringBuilder()      
+      while (cfs.hasNext && tupleSentCount < ccount) {
+        bsb.putBytes((cfs.next + "\n").getBytes())
+        remote ! Write(bsb.result)
+        bsb.clear()
+        tupleSentCount = tupleSentCount + 1
+      }
   }
 
   def receive = {
     case Received(data) => { sender ! Write(ByteString("Server: You should not send anything to me. Please don't do it again.\n")) }
     case PeerClosed => {
-      log.info("Client Teminated")
+      log.info("Client Teminated, we have done "+iterationCount+" iterations over input file")
       s.cancel
       context stop self
     }
 
     case "sendout" => {
       //log.info("sending out")
-      val bsb = new ByteStringBuilder()
-      var i = 0
+      sendOutData(count)
       
-      while (fs.hasNext && i < count) {
-        bsb.putBytes((fs.next + "\n").getBytes())
-        remote ! Write(bsb.result)
-        bsb.clear()
-        i = i + 1
+      if (tupleSentCount != count){
+        //Disconnet on EOF
+//        log.info("EOF reached, Disconneting client")   
+//        s.cancel
+//        context stop self
+
+        // Repeat on EOF
+        log.info("EOF reached, Reopening the file and starting from the begining")
+        // file data finished before count reached
+        // reopen the file and send the rest
+        iterationCount = iterationCount +1
+        cfs = scala.io.Source.fromFile(fp).getLines        
+        val tobeSent = count - tupleSentCount
+        sendOutData(tobeSent)
+        tupleSentCount = 0
+        
       }
-      
-      if (!fs.hasNext) {
-        log.info("EOF reached")
-        this.context.stop(self)
+      else {
+        tupleSentCount = 0
       }
     }
   }
