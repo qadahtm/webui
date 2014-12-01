@@ -140,8 +140,8 @@ class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) ex
   implicit val timeout = Timeout(3)
   
   implicit val codec = scala.io.Codec("UTF-8")
-  codec.onMalformedInput(CodingErrorAction.REPLACE)
-  codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
+  codec.onMalformedInput(CodingErrorAction.IGNORE)
+  codec.onUnmappableCharacter(CodingErrorAction.IGNORE)
   
   var cfs = scala.io.Source.fromFile(fp).getLines
   var iterationCount:Long = 1
