@@ -98,13 +98,14 @@ object StreamController extends App {
 
 }
 
-class NetworkSocketControllerServer(filepath: String, host: String, port: Int, count: Int, period: Int) extends Actor with ActorLogging {
+class NetworkSocketControllerServer(filepath: String, host: String, port: Int, icount: Int, period: Int) extends Actor with ActorLogging {
 
   import Tcp._
   import context.system
 
   IO(Tcp) ! Bind(self, new InetSocketAddress(host, port))
-
+  var count = icount
+  
   def receive = {
     case b @ Bound(localAddress) => {
       log.info("Bound to : " + localAddress.toString())
@@ -120,17 +121,20 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, c
         
 //        val fs = scala.io.Source.fromFile(filepath).getLines
         val connection = sender
-        val handler = context.actorOf(Props(classOf[SimplisticHandler], filepath, count, period, connection))
+        val handler = context.actorOf(Props(classOf[SimplisticHandler], filepath, count, period, connection))        
         connection ! Register(handler)
         log.info("Connected to client at : " + remote.toString())
       }
-
+    case cu:ChangeCount =>  {context.children.foreach( _ ! cu)}
     case _ => log.info("got something")
   }
 
 }
 
-class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) extends Actor with ActorLogging {
+object RemoveMe
+case class ChangeCount(newCount:Int)
+
+class SimplisticHandler(fp:String, icount: Int, period: Int, remote: ActorRef) extends Actor with ActorLogging {
 
   //  lazy val fs = scala.io.Source.fromFile(filepath).getLines
   //  fs.next // skipping hte first line
@@ -148,6 +152,8 @@ class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) ex
   var tupleSentCount:Int = 0
   var tobeSent:Int = 0
   
+  var count = icount
+  
   val s = context.system.scheduler.schedule(0 seconds, period seconds) {
     self ! "sendout"
   }
@@ -164,9 +170,10 @@ class SimplisticHandler(fp:String, count: Int, period: Int, remote: ActorRef) ex
 
   def receive = {
     case Received(data) => { sender ! Write(ByteString("Server: You should not send anything to me. Please don't do it again.\n")) }
+    case ChangeCount(nc) => count = nc
     case PeerClosed => {
       log.info("Client Teminated, we have done "+iterationCount+" iterations over input file")
-      s.cancel
+      s.cancel      
       context stop self
     }
 

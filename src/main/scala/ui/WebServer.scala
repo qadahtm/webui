@@ -48,8 +48,15 @@ import spray.routing.Directive.pimpApply
 import spray.routing.directives.ParamDefMagnet.apply
 import utils.AppJsonProtocol._
 import utils._
+import spray.routing.authentication.BasicAuth
+import spray.routing.authentication.UserPass
+import scala.concurrent.Future
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 object Webserver extends App with SimpleRoutingApp {
+
+  object WebserverJsonFormat extends DefaultJsonProtocol
 
   val conf = Helper.getConfig()
 
@@ -79,8 +86,130 @@ object Webserver extends App with SimpleRoutingApp {
       compressible = true,
       binary = false))
 
+  case class StreamSourceMetaData(name: String, filepath: String, port: Int, var count: Int, aref: ActorRef) {    
+    def rate = count 
+    def getActorRef = aref
+    def getJsonMap = Map("name" -> JsString(name),
+      "file" -> JsString(filepath),
+      "host" -> JsString(host),
+      "port" -> JsNumber(port),
+      "rate" -> JsNumber(rate))
+    override def toString = Array(name, filepath, port, count).mkString(",")
+  }
+  val activeStreams = scala.collection.mutable.Map[String, StreamSourceMetaData]()
+  val adminSessions = ArrayBuffer[String]()
+
+  def UPAuthenticator(userPass: Option[UserPass]): Future[Option[String]] =
+    Future {
+      if (userPass.exists(up => up.user == "thamir" && up.pass == "$treams")) {
+        val skey = Random.nextString(10)
+//        log.info("Generated : " + skey)
+//        adminSessions += skey
+        Some("thamir")
+//        Some(skey)
+      } else None
+    }
+
+  val getAvailableDataFiles = path("datafiles") {
+    get {
+      val datafiles = new File(conf.getString("webserver.data.dir"))
+      complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+        JsArray(datafiles.listFiles().filter {
+          f => !f.isDirectory && """.*\.csv""".r.findFirstIn(f.getName()).isDefined
+        }.map(f => JsString(f.getName()))
+          .toVector).toString)))
+    }
+  }
+
+  val getAllStreamSourcesRoute = path("streamsources") {
+    get {
+      complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+        JsArray(activeStreams.values.map {
+          s => JsObject(s.getJsonMap)
+        }.toVector).toString)))
+    }
+  }
+  
+  val streamSourcesControlRoute =
+    sealRoute {
+      path("stream-source-control") {
+//        log.info("got here before authentication")
+        authenticate(BasicAuth(UPAuthenticator _, realm = "secure site")) { userName =>
+          post {
+//            log.info("got here")
+            formFields('name, 'filename, 'sport.as[Int], 'scount.as[Int]) { (name, fname, port, count) =>
+              {                
+               // create source stream if not exist
+                if (activeStreams.keys.toSet[String].contains(name)){
+                  complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+				        JsObject("streamName"-> JsString(name),
+				        		"status" -> JsString("already exists")).toString)))   	                
+                }               
+                else{
+                  val portSet = activeStreams.values.flatMap(p => {
+                    if (p.port == port) Some(port) else None
+                  })
+                  if (portSet.size > 0){
+                    log.info("port already in use")
+                	  complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+				        JsObject("streamName"-> JsString(name),
+				        		"status" -> JsString("port already in use")).toString)))  
+                  }
+                  else{
+                    val c = system.actorOf(Props(classOf[NetworkSocketControllerServer], conf.getString("webserver.data.dir")+"/"+fname, host, port, count, 1), name = name)                
+	                val ss = StreamSourceMetaData(name, fname, port.toInt, count.toInt, c)
+	                log.info("created a stream source with: "+ss.toString)
+	                activeStreams += (name -> ss)
+	                complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+				        JsObject("streamName"-> JsString(name),
+				        		"status" -> JsString("created")).toString)))   
+                  }
+                  
+	            }                 
+              }
+            }~
+            formFields('name, 'scount.as[Int]) { (name, count) =>{
+              // update rate 
+              if (activeStreams.keys.toSet[String].contains(name)){
+                
+            	  val s = activeStreams.get(name)
+            	  
+            	  s.foreach(ss => {
+            	    ss.count = count
+            	    ss.aref ! utils.ChangeCount(count)
+            	  })
+                  complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+				        JsObject("streamName"-> JsString(name),
+				        		"status" -> JsString("updated")).toString)))   	                
+                }
+                else{                  
+	                complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+				        JsObject("streamName"-> JsString(name),
+				        		"status" -> JsString("does not exist")).toString)))   
+	            }
+            }
+            }
+          }~
+          delete{
+            parameters('name){ 
+              (name) => {
+                activeStreams -= name
+                complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+			        JsObject("streamName"-> JsString(name),
+			        		"status" -> JsString("deleted")).toString)))
+              }
+              
+            }                
+          }
+        }
+      }
+    }
+
   startServer(interface = host, port = port) {
     getFromDirectory("ui/public") ~
+      getAvailableDataFiles ~
+      getAllStreamSourcesRoute ~
+      streamSourcesControlRoute ~
       path("data") {
         get {
           complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, """ {"key":"value"} """)))
@@ -98,15 +227,15 @@ object Webserver extends App with SimpleRoutingApp {
           {
             //            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "output", (formatSSETweets _), EventStreamType)
             //            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "output", (formatSSETweets _), EventStreamType)
-            log.info("Creating a subscription to "+resultPubSubActor)
+            log.info("Creating a subscription to " + resultPubSubActor)
             val aprops = Props(classOf[BufferingStreamer], ctx.responder, resultPubSubActor, (Helper.formatSSETweets _), EventStreamType)
             val streamer = system.actorOf(aprops)
           }
-      } ~      
+      } ~
       path("output-stream") {
         ctx =>
           {
-            log.info("Creating a subscription to "+resultPubSubActor)
+            log.info("Creating a subscription to " + resultPubSubActor)
             val aprops = Props(classOf[BufferingStreamer], ctx.responder, resultPubSubActor, (Helper.selfString _), EventStreamType)
             val streamer = system.actorOf(aprops)
           }
@@ -205,14 +334,14 @@ object Webserver extends App with SimpleRoutingApp {
             val streamer = system.actorOf(aprops)
 
           }
-      } ~      
+      } ~
       path("berlinmod-trip-stream") {
         ctx =>
           {
             val datafile = conf.getString("webserver.data.trips")
             val datatype = conf.getString("webserver.data.trips-type")
             val freq = conf.getString("webserver.data.freq").toInt
-            val aprops = Props(classOf[BerlinMODTripStreamer], ctx.responder, datafile, datatype,freq, EventStreamType)
+            val aprops = Props(classOf[BerlinMODTripStreamer], ctx.responder, datafile, datatype, freq, EventStreamType)
             val streamer = system.actorOf(aprops)
 
           }
@@ -232,7 +361,7 @@ object Webserver extends App with SimpleRoutingApp {
       path("stream") {
         ctx =>
           {
-            val aprops = Props(classOf[Streamer], ctx.responder,EventStreamType)
+            val aprops = Props(classOf[Streamer], ctx.responder, EventStreamType)
             val streamer = system.actorOf(aprops)
           }
       }

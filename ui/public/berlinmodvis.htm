@@ -125,6 +125,7 @@ var es; // event stream handle
       var queries = [];
       var inputpoints =[];
       var trips =[];
+      var streets = [];
 
       var eventsources = [];
 
@@ -212,6 +213,23 @@ var es; // event stream handle
     	 // 		pline.setMap(gmap);
 
     	 	}
+        else if (sse.type === "street"){
+          
+           var plinePoints = [];
+           plinePoints.push(new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng)); 
+           plinePoints.push(new google.maps.LatLng(sse.tend.lat, sse.tend.lng));
+
+          var pline = new google.maps.Polyline({
+            path: plinePoints,
+            geodesic: true,
+            strokeColor: '#0000FF',
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+          });
+           streets.push(pline);          
+           pline.setMap(gmap);
+
+        }
         else if (sse.type === "updates"){
           for (var i = 0; i < sse.updates.length; i++) {
             var u = sse.updates[i];
