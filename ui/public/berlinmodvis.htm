@@ -13,6 +13,7 @@
      <script type="text/javascript" src="js/jquery.json.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.min.js"></script>
     <script type="text/javascript" src="js/portal.min.js"></script>
+    <script type="text/javascript" src="js/randomColor.js"></script>
 
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
 
@@ -136,29 +137,29 @@ var es; // event stream handle
         
     	$("#openStream").click(function(event) {    		
 
-		es = new EventSource("/berlinmod-query-stream");
+		// es = new EventSource("/berlinmod-query-stream");
 		 
-    	 es.onmessage = function(e) {
-    	 	var sse = $.parseJSON(e.data);
-    	 	console.log("received an sse : "+$.toJSON(e.data));  
-    	 	// "{\"west\":13.552150758472129,\"north\":52.562162292366374,\"qtype\":\"rect\",\"south\":52.54686656313309,\"type\":\"query\",\"east\":13.526257770775386} "  
+  //   	 es.onmessage = function(e) {
+  //   	 	var sse = $.parseJSON(e.data);
+  //   	 	console.log("received an sse : "+$.toJSON(e.data));  
+  //   	 	// "{\"west\":13.552150758472129,\"north\":52.562162292366374,\"qtype\":\"rect\",\"south\":52.54686656313309,\"type\":\"query\",\"east\":13.526257770775386} "  
 
-    	 	if (sse.type === "query" && sse.qtype === "rect"){
-			    var rectangle = new google.maps.Rectangle({
-				    strokeColor: '#FF0000',
-				    strokeOpacity: 0.8,
-				    strokeWeight: 2,
-				    fillColor: '#FF0000',
-				    fillOpacity: 0.35,
-				    map: gmap,
-				    bounds: new google.maps.LatLngBounds(
-				      new google.maps.LatLng(sse.north, sse.east),
-				      new google.maps.LatLng(sse.south, sse.west))
-				  });
-    	 		markers.push(rectangle);    	 		
-    	 	}	 	
-		 };
-		 eventsources.push(es);
+  //   	 	if (sse.type === "query" && sse.qtype === "rect"){
+		// 	    var rectangle = new google.maps.Rectangle({
+		// 		    strokeColor: '#FF0000',
+		// 		    strokeOpacity: 0.8,
+		// 		    strokeWeight: 2,
+		// 		    fillColor: '#FF0000',
+		// 		    fillOpacity: 0.35,
+		// 		    map: gmap,
+		// 		    bounds: new google.maps.LatLngBounds(
+		// 		      new google.maps.LatLng(sse.north, sse.east),
+		// 		      new google.maps.LatLng(sse.south, sse.west))
+		// 		  });
+  //   	 		markers.push(rectangle);    	 		
+  //   	 	}	 	
+		//  };
+		//  eventsources.push(es);
 
 
 		 es = new EventSource("/berlinmod-trip-stream");
@@ -169,7 +170,8 @@ var es; // event stream handle
 //"{\"type\":\"trip\",\"moid\":1,\"tstart\":{\"ts\":1180238400000,\"lat\":52.41721101883486,\"lng\":13.43593269907358},\"tend\":{\"ts\":1180355807846,\"lat\":52.41721101883486,\"lng\":13.43593269907358}} "
     	 	if (sse.type === "trip" ){
 
-				var myLatlng = new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng);
+				// var myLatlng = new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng);
+        var myLatlng = new google.maps.LatLng(sse.tend.lat, sse.tend.lng);
         var image = {
           url: 'images/car2-24.png',
           // This marker is 20 pixels wide by 32 pixels tall.
@@ -196,21 +198,75 @@ var es; // event stream handle
           m.setMap(gmap)
           
         }
-          
-    
-    	 // 		var plinePoints = [];
-    	 // 		plinePoints.push(new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng));	
-    	 // 		plinePoints.push(new google.maps.LatLng(sse.tend.lat, sse.tend.lng));
+          var color = randomColor().slice(1).toUpperCase();
+          // console.log("color: "+color);
+          // drawing line trail
+    	 		var plinePoints = [];
+    	 		plinePoints.push(new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng));	
+    	 		plinePoints.push(new google.maps.LatLng(sse.tend.lat, sse.tend.lng));
 
-			   //  var pline = new google.maps.Polyline({
-				  //   path: plinePoints,
-				  //   geodesic: true,
-				  //   strokeColor: '#0000FF',
-				  //   strokeOpacity: 1.0,
-				  //   strokeWeight: 2
-				  // });
-    	 // 		trips.push(pline);    	 		
-    	 // 		pline.setMap(gmap);
+			    var pline = new google.maps.Polyline({
+				    path: plinePoints,
+				    geodesic: true,
+				    strokeColor: '#'+color,
+				    strokeOpacity: 1.0,
+				    strokeWeight: 2
+				  });
+    	 		trips.push(pline);    	 		
+    	 		pline.setMap(gmap);
+
+
+          //drawing mbr of each trip segment
+
+          var rectangle = new google.maps.Rectangle({
+            strokeColor: '#'+color,
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#'+color,
+            fillOpacity: 0.35
+          });
+
+          if (sse.tend.lng > sse.tstart.lng){                          
+            if (sse.tend.lat > sse.tstart.lat){
+               var normal = new google.maps.LatLngBounds(
+              new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng),
+              new google.maps.LatLng(sse.tend.lat, sse.tend.lng)              
+              );
+            rectangle.setBounds(normal);                              
+            }
+            else{
+              var reverseLng = new google.maps.LatLngBounds(
+              new google.maps.LatLng(sse.tend.lat, sse.tstart.lng),
+              new google.maps.LatLng(sse.tstart.lat, sse.tend.lng)
+              );
+              rectangle.setBounds(reverseLng);
+            } 
+          }
+          else{
+            if (sse.tend.lat > sse.tstart.lat){                                  
+              var reverseLat = new google.maps.LatLngBounds(
+              new google.maps.LatLng(sse.tstart.lat, sse.tend.lng),
+              new google.maps.LatLng(sse.tend.lat, sse.tstart.lng)
+              );
+              rectangle.setBounds(reverseLat);                   
+            }
+            else{
+             var reverseBoth = new google.maps.LatLngBounds(
+              new google.maps.LatLng(sse.tend.lat, sse.tend.lng),
+              new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng)
+              );
+             rectangle.setBounds(reverseBoth); 
+            }            
+          }
+
+          // var reverse = new google.maps.LatLngBounds(
+              // new google.maps.LatLng(sse.tend.lat, sse.tend.lng),
+              // new google.maps.LatLng(sse.tstart.lat, sse.tstart.lng)
+              // );
+              // rectangle.setBounds(reverse);
+          
+          rectangle.setMap(gmap);
+
 
     	 	}
         else if (sse.type === "street"){

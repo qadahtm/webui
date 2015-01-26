@@ -125,7 +125,11 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, i
         connection ! Register(handler)
         log.info("Connected to client at : " + remote.toString())
       }
-    case cu:ChangeCount =>  {context.children.foreach( _ ! cu)}
+    case cu:ChangeCount =>  {
+      log.info("changing rate for all connections to "+cu.newCount)
+      count = cu.newCount
+      context.children.foreach( _ ! cu)
+    }
     case _ => log.info("got something")
   }
 
@@ -170,7 +174,10 @@ class SimplisticHandler(fp:String, icount: Int, period: Int, remote: ActorRef) e
 
   def receive = {
     case Received(data) => { sender ! Write(ByteString("Server: You should not send anything to me. Please don't do it again.\n")) }
-    case ChangeCount(nc) => count = nc
+    case ChangeCount(nc) => {
+      log.info(s"changing rate to $nc per second")
+      count = nc
+    }
     case PeerClosed => {
       log.info("Client Teminated, we have done "+iterationCount+" iterations over input file")
       s.cancel      

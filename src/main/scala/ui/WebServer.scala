@@ -207,14 +207,6 @@ object Webserver extends App with SimpleRoutingApp {
 
   startServer(interface = host, port = port) {
     getFromDirectory("ui/public") ~
-      getAvailableDataFiles ~
-      getAllStreamSourcesRoute ~
-      streamSourcesControlRoute ~
-      path("data") {
-        get {
-          complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, """ {"key":"value"} """)))
-        }
-      } ~
       path("twitter-stream") {
         ctx =>
           {
@@ -346,25 +338,15 @@ object Webserver extends App with SimpleRoutingApp {
 
           }
       } ~
-      path("mbr-stream") {
-        parameters('north, 'west, 'south, 'east) { (n, w, s, e) =>
-          {
-            ctx =>
-              {
-
-                val aprops = Props(classOf[MBRStreamer], ctx.responder, new MBR(n.toDouble, w.toDouble, s.toDouble, e.toDouble), EventStreamType)
-                val streamer = system.actorOf(aprops)
-              }
-          }
-        }
-      } ~
+      getAvailableDataFiles ~
+      getAllStreamSourcesRoute ~
+      streamSourcesControlRoute ~
       path("stream") {
         ctx =>
           {
             val aprops = Props(classOf[Streamer], ctx.responder, EventStreamType)
             val streamer = system.actorOf(aprops)
           }
-      }
-
+      }      
   }
 }

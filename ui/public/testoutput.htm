@@ -30,7 +30,7 @@
 
         if (sse.type === "output"){
           // console.log("content: "+sse.data);
-          $("#sparkStreamingOutput").append('<p>'+sse.data+'</p>');
+          $("#sparkStreamingOutput").append('<p>'+$.toJSON(sse.data)+'</p>');
         }
 
      };

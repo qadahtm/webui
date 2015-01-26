@@ -12,6 +12,8 @@ seq(
         // [Optional] Specify mappings from program name -> Main class (full package path)
         packMain := Map(
         "WebServer" -> "ui.Webserver"
+        ,"ClientTest" -> "semnets.TcpClientTest"
+	,"SemanticNodes" -> "semnets.SemanticNodes"
         ,"StreamConroller" -> "utils.StreamController"    
 	),
         // Add custom settings here
@@ -35,6 +37,9 @@ seq(
 resolvers ++= Seq(
 			"spray repo" at "http://repo.spray.io",
 			"spray nightlies" at "http://nightlies.spray.io",
+			"java maven" at "http://download.java.net/maven/2",
+			"osgeo" at "http://download.osgeo.org/webdav/geotools/",
+			"Boundless Maven Repository" at "http://repo.boundlessgeo.com/main",
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/releases/",
   "Secured Central Repository" at "https://repo1.maven.org/maven2"
 )
@@ -47,6 +52,15 @@ libraryDependencies ++= Seq(
   "io.spray"           %% "spray-routing"    % "1.3.2",
   "io.spray"           %% "spray-httpx"    % "1.3.2",
   "io.spray"           %% "spray-json"       % "1.3.0",
+  "com.assembla.scala-incubator"           %% "graph-core"       % "1.9.0",
+  "com.assembla.scala-incubator"           %% "graph-json"       % "1.9.2",
+  "com.assembla.scala-incubator"           %% "graph-dot"       % "1.9.0",
+  "com.assembla.scala-incubator"           %% "graph-constrained"       % "1.8.0",
+  "org.geotools" % "gt-main" % "12.1",
+  "org.geotools" % "gt-epsg-hsql" % "12.1",
+  "org.geotools" % "gt-shapefile" % "12.1",
+  //"org.geotools" % "gt-render" % "12.1",  
+  "org.geotools" % "gt-geojson" % "12.1",
  "org.apache.spark" %% "spark-core" % "1.1.0" %  "provided",
  "org.apache.spark" %% "spark-streaming" % "1.1.0" %  "provided",
   "org.apache.spark" %% "spark-streaming-kafka" % "1.1.0" %  "provided",
