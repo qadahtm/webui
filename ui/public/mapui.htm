@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    
+    <link href="css/jquery-ui.min.css" rel="stylesheet">
+    <script type="text/javascript" src="js/jquery.js"></script>
+     <script type="text/javascript" src="js/jquery.json.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="js/portal.min.js"></script>
+    <script type="text/javascript" src="js/randomColor.js"></script>
+
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
+
+    <script type="text/javascript">
+
+if(typeof(Storage) !== "undefined") {
+    // Code for localStorage/sessionStorage.
+
+    if (localStorage.testarr){
+      console.log("found test arr");
+    }
+    else{
+      console.log("nothing found");
+      localStorage.testarr = {"content":[{"val":1},{"val":2}]};
+    }
+
+} else {
+    // Sorry! No Web Storage support..
+}
+
+    
+   	var gmap = null;
+
+    var beforeColor = '#CF5656';
+    var afterColor = '#9BC150';
+
+    var polylines = [];
+
+    var drawingContext = {
+      rectangles:[],
+      rectangleMaxCount:3
+    };
+    var drawingManager = null;
+
+    var beforeRectOptions = {
+      clickable: true,
+      draggable:true,
+      editable:true,
+      fillColor: beforeColor, 
+      fillOpacity: 0.5,
+      strokeWeight: 5
+    };
+
+    // place holder object for the request
+    var request = {
+        mbr:null
+      };
+
+    var drawingOptions = {
+      drawingMode: null,//google.maps.drawing.OverlayType.RECTANGLE,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [
+          // google.maps.drawing.OverlayType.CIRCLE,
+          // google.maps.drawing.OverlayType.POLYGON,
+          google.maps.drawing.OverlayType.MARKER,
+          google.maps.drawing.OverlayType.RECTANGLE
+        ]
+      },
+      rectangleOptions:beforeRectOptions
+    };
+
+
+var es; // event stream handle
+
+    
+      function initialize() {
+
+        var mapOptions = {
+
+          // US 
+          // 39.730255, -98.018183
+        		//24.507052, 45.371521
+
+        		// berlin
+        		// 52.520190250694526&west=13.405380249023438&south=52.51914570999911&east=13.407440185546875 
+            // makkah : 22.473878, 40.121263
+          center: new google.maps.LatLng(39.730255, -98.018183),
+          zoom: 5
+        };
+        var map = new google.maps.Map(document.getElementById("map-canvas"),
+            mapOptions);
+        gmap = map;
+
+        drawingOptions.rectangleOptions = beforeRectOptions;
+
+      drawingManager = new google.maps.drawing.DrawingManager(drawingOptions);
+      drawingManager.addListener("rectanglecomplete",function(e){
+        // console.log("a rectangle is completed");
+        // console.log(e.getBounds());
+        // console.log("current count = "+drawingContext.rectangles.length);
+        if ((drawingContext.rectangles.length) == drawingContext.rectangleMaxCount){
+          // console.log("max count has reached which is "+drawingContext.rectangleMaxCount);
+          e.setMap(null);
+        }
+        else{
+          var qid = drawingContext.rectangles.length+1;
+          drawingContext.rectangles.push(e);  
+          e.addListener("bounds_changed",function(){
+            updateMBR(qid, this);  
+          });
+          updateMBR(qid,e);  
+        }
+
+      });
+
+      drawingManager.setMap(map);
+
+      }
+
+      var queries = [];
+      var inputpoints =[];
+      var trips =[];
+      var lines = [];
+
+      var eventsources = [];
+
+      $(document).ready(function() {
+        // Intialize google maps
+    	  google.maps.event.addDomListener(window, 'load', initialize);
+
+
+
+   		});
+
+      var markers = [];
+
+      function clearMap(){
+        while (drawingContext.rectangles.length > 0){
+          drawingContext.rectangles.pop().setMap(null);
+        }
+        drawingOptions.rectangleOptions = beforeRectOptions;
+        drawingManager.setOptions(drawingOptions);
+        drawingManager.setMap(gmap);
+
+        // remove all polylines
+
+        while (polylines.length > 0){
+          polylines.pop().setMap(null);
+        }
+
+
+      }
+      
+    </script>
+    <style type="text/css">
+    #controlpanel {
+      position:relative;width:100%;z-index:5;
+      /*background-color:#B3D1FF;*/
+
+    }
+    </style>
+  </head>
+  <body>
+  	<div id="controlpanel" >
+    <div >
+      <p>
+     Find tweet pairs that:
+are on same topic (KEYWORD MATCH) and
+within 200 feet (SPATIAL RANGE) and
+ and within 10 sec (TIME WINDOW)  
+    </p>
+    
+    </div>
+  	
+  	<div style="position:relative" id="clist"></div>
+	</div>
+    <div id="map-canvas" style="z-index:0;"></div>
+  </body>
+</html>
