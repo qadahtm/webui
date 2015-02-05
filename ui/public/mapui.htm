@@ -15,9 +15,14 @@
     <script type="text/javascript" src="js/portal.min.js"></script>
     <script type="text/javascript" src="js/randomColor.js"></script>
 
+    <script src="js/peg-0.8.0.min.js"></script>
+  <script src="js/jsDump.js" ></script>
+
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
 
     <script type="text/javascript">
+
+var clientState = undefined;
 
 if(typeof(Storage) !== "undefined") {
     // Code for localStorage/sessionStorage.
@@ -27,7 +32,8 @@ if(typeof(Storage) !== "undefined") {
     }
     else{
       console.log("nothing found");
-      localStorage.testarr = {"content":[{"val":1},{"val":2}]};
+      var o= {"content":[{"val":1},{"val":2}]};
+      localStorage.testarr = $.toJSON(o);
     }
 
 } else {
@@ -133,6 +139,38 @@ var es; // event stream handle
       var eventsources = [];
 
       $(document).ready(function() {
+        /** Parser Code **/
+
+        var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim());
+        function syncSQLparse(){
+                try{
+                    var pres = parser.parse($("#textData").val());
+                    $('#prettyPrint').text(jsDump.parse(pres));
+                    return pres;
+                } catch (err){
+                    $('#prettyPrint').text(jsDump.parse(err));
+                    return null;
+                }
+            }
+      
+      
+      $("#compileSQL").click(function() {
+        syncSQLparse();
+
+        $( "#prettyPrint" ).dialog({
+      modal: true,
+      buttons: {
+        "Delete all items": function() {
+          $( this ).dialog( "close" );
+        },
+        Cancel: function() {
+          $( this ).dialog( "close" );
+        }
+      }
+    });
+      });
+       /**     **/
+
         // Intialize google maps
     	  google.maps.event.addDomListener(window, 'load', initialize);
 
@@ -164,12 +202,48 @@ var es; // event stream handle
     #controlpanel {
       position:relative;width:100%;z-index:5;
       /*background-color:#B3D1FF;*/
+      display: block;
+      height: 8em;
+    }
+    #side {
+      display: block;
+      width:14em;
+      height: 100%;
+      z-index: 5;
+      float: left;
+    }
+    #logo{
+      display: block;
+      width: 14em;
+      height: 100%;
+      background-color: black;
+      float: left;
+    }
 
+     /* Styling code for display purposes */
+    .jsDump {
+        overflow: auto;
+        /*max-height: 20em;*/
+        margin: 0;
+        padding: .5em 1em;
+        border: 2px solid silver;
+        border-top: none;
+        background-color: #f0f0f0;
+        display: block;
+        font-family: monospace;
+        white-space: pre;
+        width:auto;
     }
     </style>
   </head>
   <body>
   	<div id="controlpanel" >
+    <div id="logo">
+      
+    </div>
+    <div class="row">
+      <spam></spam>
+    </div>
     <div >
       <p>
      Find tweet pairs that:
@@ -177,11 +251,215 @@ are on same topic (KEYWORD MATCH) and
 within 200 feet (SPATIAL RANGE) and
  and within 10 sec (TIME WINDOW)  
     </p>
+    <div id="tabs-4">
+    <div>
+    <h3>Examples</h3>
+    <ul>
+    <li class="qex">register source s1 (JsString rid key, JsNumber RoomTemp);</li>
+    <li class="qex">create streamed view q1 as 
+select * 
+from s1 as stream1 sync 3,s1 as s2 sync 7
+where stream1.rid = "r1" and s2.RoomTemp = s1.RoomTemp and s2.rid = "r3";</li>
+<li class="qex">create streamed view q1 as 
+select * 
+from s1 
+where s1.RoomTemp = 3;</li>
+<li class="qex">create streamed view q1 as 
+select * 
+from s1;</li>
+    </ul>
+    </div>
+    <div id="textEntry" style="">
+        <textarea id="textData" style="width:840px;height: 100px;">register source s1 (JsString rid key, JsNumber RoomTemp);</textarea>
+    </div>
+    <button id="compileSQL">Parse</button>
+    <button id="sendQuery">Send</button>
+    <div id="prettyPrint" class="jsDump"></div>
+    <div id="gviz"></div>
+</div>
     
     </div>
   	
   	<div style="position:relative" id="clist"></div>
 	</div>
-    <div id="map-canvas" style="z-index:0;"></div>
+  <div id="side">
+    
+  </div>
+  <div id="map-canvas" style="z-index:0;"></div>
+
+  <div id="SyncSQLGrammar" style="display:none;">
+/*
+* Grammar for parsing SyncSQL
+* Currently Implemented:
+*  - Register Source Statement
+Example:  
+register source s2 (JsString rid, JsNumber RoomTemp, JsString RoomNotes, JsNumber phoneNumber);
+
+*  - Select Statement
+*     - With Project -
+Example:
+create streamed view q1 as 
+select * 
+from s1 as stream1 sync 3,s2
+where s1.rid = "r1" and s2.roomTemp = 3;
+
+*/
+
+start = sqls:sqlstmt spp ";" sps {return sqls}
+sqlstmt = regstmt / createviewstmt
+
+
+createviewstmt = "create" spp "streamed" spp "view" spp cn:ident spp as spp sel:selectstmt {var res = {"type":"query"}; res.name=cn; 
+//res.pl = sel.pl; res.fc = sel.fc; res.wc = sel.wc;
+
+res.sourceNames = [];
+for (i in sel.fc){ if ($.inArray(sel.fc[i].name,res.sourceNames) === -1 ) res.sourceNames.push(sel.fc[i].name); }
+res.plan = {};
+var child;
+if (sel.fc.length == 1){
+if (sel.wc != null){
+child = {"type":"select","conditions":sel.wc.conditions};
+child.children = [sel.fc.pop()];
+}
+else{
+child = sel.fc[0]
+}
+sel.pl.children = [child]
+   res.plan =sel.pl;
+}
+else{
+// sel.fc.length == 2
+var leftleaf = sel.fc.pop();
+var rightleaf = sel.fc.pop();
+var left = leftleaf;
+var right = rightleaf;
+
+var jconds = [];
+var i = sel.wc.conditions.length-1;
+while (sel.wc.conditions.length){
+
+ var sn = sel.wc.conditions[i][0].streamName;
+var cleft = sel.wc.conditions[i][0];
+var cright = sel.wc.conditions[i][2];
+if ($.isPlainObject(cleft) && $.isPlainObject(cright)){
+// a join condition
+var jcond = sel.wc.conditions.splice(i,1);
+jconds.push(jcond[0]);
+}
+else if (sn === left.name ||  sn === left.alias){
+  
+   var leftselect = {};
+   leftselect.type = "select";
+   leftselect.conditions = sel.wc.conditions.splice(i,1);
+   leftselect.children=[left];
+   left = leftselect;
+ }
+else if (sn === right.name || sn === right.alias){
+
+   var rightselect = {};
+   rightselect.type = "select";
+   rightselect.conditions = sel.wc.conditions.splice(i,1);
+   rightselect.children=[right];
+   right = rightselect;
+}
+--i;
+   
+}
+var join = {"type":"join","conditions":jconds,"children":[left,right]};
+
+   sel.pl.children = [join]
+   res.plan =sel.pl;
+}
+
+return res;}
+
+/****** BEGIN Select Statement *****/
+
+selectstmt = "select" spp pl:projectList spp fc:fromclause wc:(spp whereclause)?
+{var res = {};
+res.pl = pl;
+res.fc = fc;
+res.plan = {};
+if (wc != null){
+res.wc = wc[1];
+}
+return res;}
+
+projectList = pa:"*" {return {"type":"project","attributes":[pa]}}
+
+fromclause = "from" sp sl:sourceList {return sl;}
+
+sourceList = s1:sourceName sps sl:(comma sps sourceList)? 
+{var res = []; 
+res.push(s1); if (sl != null) for (i in sl[2]) res.push(sl[2][i]); return res;}
+
+sourceName = n:ident  a:(sps as sp ident)? sps sync:(sps "sync" sp numVal)? {
+var res = {};
+res.type = "stream";
+res.name = n
+if (a != null) res.alias = a[3];
+if (sync != null) res.sync = sync[3];
+return res;}
+
+whereclause = "where" spp cl:condList {return {"conditions":cl};}
+
+condList = c1:scondition sps cl:("and" sp condList)? {var res = []; res.push(c1); if (cl != null){
+for (i in cl[2]) res.push(cl[2][i]);
+}; return res;}
+
+scondition = lhs:cident sp cop:coper sp rhs:cident {return [lhs,cop,rhs];}
+/ lhs:cident sp cop:coper sp rhs:numVal {return [lhs,cop,rhs];}
+/ lhs:cident sp cop:coper sp rhs:strVal {return [lhs,cop,rhs];}
+
+cident = sa:(ident ".")? ca:ident { if (sa != null) return {"streamName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
+
+coper = "=" / ">" / "<" / ">=" / "<=" / "!="
+
+as = "as"
+
+/****** END Select Statement *****/
+
+/****** BEGIN  Register Source Statement *****/
+regstmt = "register" sp "source" sp id:ident sp op sps schema:attrList sps cp {return {"type":"sources","id":id,"schema":schema}}
+
+attrList = a1:attribute sps comma sps an:attrList 
+{var res = []; res.push(a1); 
+for (i in an) res.push(an[i]);
+return res;}
+           / a:attribute {var res =[]; res.push(a);return res;}
+attribute = dt:data_type sps attrName:ident sps k:isKey?
+{
+var res = new Object(); 
+res = {"name":attrName,"type":dt};
+if (k != null) res["isKey"] = (k!=null);
+return res;
+}
+isKey = "key"
+
+/****** END Register Source Statement *****/
+
+
+numVal = dig:[0-9]+ {return new Number(dig.join("")).valueOf();}
+strVal = "\"" str:ident "\"" {return str;}
+
+
+
+ident = alpha:[a-zA-Z]+dig:[0-9]* {return alpha.join("").concat(dig.join(""));}
+data_type = "JsNumber" / "JsString" / "JsBoolean" 
+
+and = "and"
+or = "or"
+
+comma = ","
+
+cp = ")"
+
+op = "("
+
+nl = "\n"
+sps = sp*
+spp = sps nl? sps
+sp = " "
+</div>
   </body>
 </html>
