@@ -8,15 +8,18 @@
       #map-canvas { height: 100% }
     </style>
     
-    <link href="css/jquery-ui.min.css" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
+    <link type="text/css" rel="stylesheet" href="css/vis.css">
+  
     <script type="text/javascript" src="js/jquery.js"></script>
      <script type="text/javascript" src="js/jquery.json.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.min.js"></script>
     <script type="text/javascript" src="js/portal.min.js"></script>
     <script type="text/javascript" src="js/randomColor.js"></script>
-
     <script src="js/peg-0.8.0.min.js"></script>
   <script src="js/jsDump.js" ></script>
+  <script type="text/javascript" src="js/vis.js"></script>
+  
 
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
 
@@ -39,6 +42,33 @@ if(typeof(Storage) !== "undefined") {
 } else {
     // Sorry! No Web Storage support..
 }
+
+var uiState = {
+  knnList:[],
+  rangeList:[], 
+  resolveRangePredVar: function (v){
+    var i =0;
+    while (i < uiState.rangeList.length){
+      if (v == uiState.rangeList[i].name) {
+        return createMBR(uiState.rangeList[i].rect);
+      }
+      i++;          
+    }
+    return null;
+  },
+  resolveKNNPredVar: function (v){
+    var i =0;
+    while (i < uiState.knnList.length){
+      if (v == uiState.knnList[i].name) {
+        // console.log(uiState.knnList[i].marker.getPosition());
+        var p = uiState.knnList[i].marker.getPosition();
+        return {lat:p.lat(),lng:p.lng()};
+      }
+      i++;          
+    }
+    return null;
+  }
+};
 
     
    	var gmap = null;
@@ -68,6 +98,9 @@ if(typeof(Storage) !== "undefined") {
         mbr:null
       };
 
+
+
+
     var drawingOptions = {
       drawingMode: null,//google.maps.drawing.OverlayType.RECTANGLE,
       drawingControl: true,
@@ -80,7 +113,9 @@ if(typeof(Storage) !== "undefined") {
           google.maps.drawing.OverlayType.RECTANGLE
         ]
       },
+      markerOptions:{draggable:true},
       rectangleOptions:beforeRectOptions
+
     };
 
 
@@ -108,21 +143,36 @@ var es; // event stream handle
         drawingOptions.rectangleOptions = beforeRectOptions;
 
       drawingManager = new google.maps.drawing.DrawingManager(drawingOptions);
+      drawingManager.addListener("markercomplete",function(e){
+        if ((uiState.knnList.length) == drawingContext.rectangleMaxCount){ //TODO change limit
+          e.setMap(null);
+        }
+        else{
+          var qid = uiState.knnList.length;
+          uiState.knnList.push({show:true,name:"f"+qid,marker:e});  
+
+          e.addListener("position_changed",function(){
+            updateKNNPred(qid, this);  
+          });
+          updateKNNList();  
+        }
+      });
       drawingManager.addListener("rectanglecomplete",function(e){
         // console.log("a rectangle is completed");
         // console.log(e.getBounds());
         // console.log("current count = "+drawingContext.rectangles.length);
-        if ((drawingContext.rectangles.length) == drawingContext.rectangleMaxCount){
+        if ((uiState.rangeList.length) == drawingContext.rectangleMaxCount){
           // console.log("max count has reached which is "+drawingContext.rectangleMaxCount);
           e.setMap(null);
         }
         else{
-          var qid = drawingContext.rectangles.length+1;
-          drawingContext.rectangles.push(e);  
+          var qid = uiState.rangeList.length;
+          uiState.rangeList.push({show:true,name:"r"+qid,rect:e});  
+
           e.addListener("bounds_changed",function(){
             updateMBR(qid, this);  
           });
-          updateMBR(qid,e);  
+          updateRangeList();  
         }
 
       });
@@ -139,12 +189,59 @@ var es; // event stream handle
       var eventsources = [];
 
       $(document).ready(function() {
+
+        nodes = new vis.DataSet();
+  // nodes.on("add",function (event, properties, senderId) {
+  // console.log('event:', event, 'properties:', properties, 'senderId:', senderId);
+  // stats.node_count++;
+  // });
+  // var nodes = [
+    // {id: 1, label: 'Node 1'},
+    // {id: 2, label: 'Node 2'},
+    // {id: 3, label: 'Node 3'},
+    // {id: 4, label: 'Node 4'},
+    // {id: 5, label: 'Node 5'}
+  // ];
+
+  // for (var i = 0; i < nodeSet.length; i++) {
+  //   nodes[i] = {};
+  // };
+
+  // create an array with edges
+  edges = new vis.DataSet();
+  // edges.on("add",function (event, properties, senderId) {
+  // console.log('event:', event, 'properties:', properties, 'senderId:', senderId);
+  // stats.node_edge++;
+//  });
+  // var edges = [
+    // {from: 1, to: 2},
+    // {from: 1, to: 3},
+    // {from: 2, to: 4},
+    // {from: 2, to: 5}
+  // ];
+
+  // create a network
+  // var container = document.getElementById('visholder');
+  // var data = {
+  //   nodes: nodes,
+  //   edges: edges
+  // };
+  // var options = {
+  //   edges: {
+  //   style: 'arrow'
+  // }
+  // };
+  // var network = new vis.Network(container, data, options);
+
+
+
         /** Parser Code **/
 
-        var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim());
+        var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim(), uiState);
         function syncSQLparse(){
                 try{
                     var pres = parser.parse($("#textData").val());
+                    // console.log(pres);
                     $('#prettyPrint').text(jsDump.parse(pres));
                     return pres;
                 } catch (err){
@@ -153,21 +250,31 @@ var es; // event stream handle
                 }
             }
       
+      $("#buttonPanel span").click(function(event) {
+        $("#textData").val($(this).attr('data'));
+      });
       
       $("#compileSQL").click(function() {
-        syncSQLparse();
+        var ast = syncSQLparse();
+        // console.log(ast);
 
-        $( "#prettyPrint" ).dialog({
-      modal: true,
-      buttons: {
-        "Delete all items": function() {
-          $( this ).dialog( "close" );
-        },
-        Cancel: function() {
-          $( this ).dialog( "close" );
-        }
-      }
-    });
+        $( "#dialog-ast" ).dialog({
+          // resizable:false,
+          height:'auto',
+          width:'auto',
+          modal: true,
+          open: function( event, ui ) {
+            $("#tabs").tabs();
+          },
+          // buttons: {
+          //   "Delete all items": function() {
+          //     $( this ).dialog( "close" );
+          //   },
+          //   Cancel: function() {
+          //     $( this ).dialog( "close" );
+          //   }
+          // }
+        });
       });
        /**     **/
 
@@ -196,16 +303,65 @@ var es; // event stream handle
 
 
       }
+
+          // place holder object for the request
+        var request = {
+            mbr:null
+          };
+
+      // This function creates the MBR (spatial predicate) for the query
+      function updateMBR(qid, rect){
+        // console.log(qid);
+        // console.log(uiState.rangeList[qid]);
+        // console.log(rect);
+        uiState.rangeList[qid].rect = rect;
+      }
+
+
+      function updateRangeList(){
+        $("#rangeList").empty();
+        for (var i = 0; i < uiState.rangeList.length; i++) {
+          var t = uiState.rangeList[i];
+          $("#rangeList").append('<li>'+t.name+'</li>');
+        };
+      }
+
+      function updateKNNPred(qid, marker){
+        // console.log(marker);
+        uiState.knnList[qid].marker = marker;
+      }
+
+      function updateKNNList(){
+        $("#knnList").empty();
+        for (var i = 0; i < uiState.knnList.length; i++) {
+          var t = uiState.knnList[i];
+          $("#knnList").append('<li>'+t.name+'</li>');
+        };
+      }
+
+
+    function createMBR(rect){
+        return {
+          north:rect.getBounds().getNorthEast().lat(),
+          east:rect.getBounds().getNorthEast().lng(),
+          south:rect.getBounds().getSouthWest().lat(),
+          west:rect.getBounds().getSouthWest().lng()
+        };
+      }
+
       
     </script>
     <style type="text/css">
     #controlpanel {
       position:relative;width:100%;z-index:5;
       /*background-color:#B3D1FF;*/
+      background-color: black;
       display: block;
       height: 8em;
+      /*overflow: scroll;*/
     }
     #side {
+      padding: 1em;
       display: block;
       width:14em;
       height: 100%;
@@ -218,6 +374,12 @@ var es; // event stream handle
       height: 100%;
       background-color: black;
       float: left;
+    }
+
+    #logo img {
+
+       width: 14em;
+       flaot:left;
     }
 
      /* Styling code for display purposes */
@@ -234,48 +396,80 @@ var es; // event stream handle
         white-space: pre;
         width:auto;
     }
+
+    #buttonPanel {
+      float:left;
+      padding: 1em;
+      padding-bottom: 0em;  
+      padding-right: 0em;      
+    }
+
+    #buttonPanel button {
+      width:10em;
+      height: 4em;
+    }
+    #textEntry {
+      float: left;
+      width:52em;
+      padding: 1em;
+      padding-bottom: 0em;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #buttonPanel span{
+      color: white;
+
+    }
+
+    .predicateList span {
+      
+    }
     </style>
   </head>
   <body>
   	<div id="controlpanel" >
     <div id="logo">
-      
-    </div>
-    <div class="row">
-      <spam></spam>
+      <img src="images/logo-pu.png">
     </div>
     <div >
-      <p>
-     Find tweet pairs that:
-are on same topic (KEYWORD MATCH) and
-within 200 feet (SPATIAL RANGE) and
- and within 10 sec (TIME WINDOW)  
-    </p>
+      
     <div id="tabs-4">
-    <div>
-    <h3>Examples</h3>
-    <ul>
-    <li class="qex">register source s1 (JsString rid key, JsNumber RoomTemp);</li>
-    <li class="qex">create streamed view q1 as 
-select * 
-from s1 as stream1 sync 3,s1 as s2 sync 7
-where stream1.rid = "r1" and s2.RoomTemp = s1.RoomTemp and s2.rid = "r3";</li>
-<li class="qex">create streamed view q1 as 
+    <div id="textEntry" style="">
+        <textarea id="textData" style="width:840px;height: 100px; font-size:larger;">create streamed view q1 as 
 select * 
 from s1 
-where s1.RoomTemp = 3;</li>
-<li class="qex">create streamed view q1 as 
+where s1.inRange(r1);</textarea>
+    </div>
+    <div id="buttonPanel">
+      <button id="compileSQL" class="button">Parse</button>  
+      <span style="display:none;" data='create streamed view q1 as 
 select * 
-from s1;</li>
-    </ul>
+from s1 as stream1 sync 3,s1 as s2 sync 7
+where stream1.rid = "r1" and s2.RoomTemp = s1.RoomTemp and s2.kNN(5,f1);'>Join</span>
+      <span data="create streamed view q1 as 
+select * 
+from s1 
+where s1.inRange(r1);">Range</span>
+      <span data="create streamed view q1 as 
+select * 
+from s1 
+where s1.kNN(4,f1);">KNN</span>      
     </div>
-    <div id="textEntry" style="">
-        <textarea id="textData" style="width:840px;height: 100px;">register source s1 (JsString rid key, JsNumber RoomTemp);</textarea>
-    </div>
-    <button id="compileSQL">Parse</button>
-    <button id="sendQuery">Send</button>
+    
+    <!-- <button id="visQuery">Visualize</button> -->
+
+    <div id="dialog-ast" class="hidden" title="Parse Tree">
     <div id="prettyPrint" class="jsDump"></div>
-    <div id="gviz"></div>
+    </div>
+
+<!--     <div id="dialog-vis" class="hidden" >    
+    <div id="visholder"></div>  
+    </div>   -->
+    
+    
 </div>
     
     </div>
@@ -283,7 +477,21 @@ from s1;</li>
   	<div style="position:relative" id="clist"></div>
 	</div>
   <div id="side">
-    
+    <div class="predicateList">
+      <span>Focal points</span>
+      <ul id="knnList">
+      <li>No points</li>
+      </ul>
+    </div>
+    <div class="predicateList">
+    <span>Range predicates</span>
+      <ul id="rangeList">
+      <li>No predicates</li>
+      </ul>
+    </div>
+    <div class="predicateList">
+      
+    </div>
   </div>
   <div id="map-canvas" style="z-index:0;"></div>
 
@@ -303,7 +511,32 @@ select *
 from s1 as stream1 sync 3,s2
 where s1.rid = "r1" and s2.roomTemp = 3;
 
+* - Spatial Predicates inRange and kNN
+
 */
+
+{
+//var uiState = {
+//resolveRangePredVar: function(){return null;},
+//resolveKNNPredVar:function(){return null;}
+//};
+
+   function getState(){
+      return uiState;
+   }
+
+   function bindVar(t, v){
+      //console.log(uiState);
+     if (t == "kNN"){
+      console.log(uiState.resolveKNNPredVar(v));
+      return uiState.resolveKNNPredVar(v);
+     } 
+     else if (t == "inRange"){        
+        return uiState.resolveRangePredVar(v);
+     }
+     else return null;
+   }
+}
 
 start = sqls:sqlstmt spp ";" sps {return sqls}
 sqlstmt = regstmt / createviewstmt
@@ -410,6 +643,8 @@ for (i in cl[2]) res.push(cl[2][i]);
 scondition = lhs:cident sp cop:coper sp rhs:cident {return [lhs,cop,rhs];}
 / lhs:cident sp cop:coper sp rhs:numVal {return [lhs,cop,rhs];}
 / lhs:cident sp cop:coper sp rhs:strVal {return [lhs,cop,rhs];}
+/ obj:ident sps dot sps pname:predName1 sps op sps parg:ident  sps cp {return [obj,pname,bindVar(pname,parg)];}
+/ obj:ident sps dot sps pname:predName2n sps op sps kval:numVal sps comma sps parg:ident  sps cp {return [obj,pname,kval,bindVar(pname,parg)];}
 
 cident = sa:(ident ".")? ca:ident { if (sa != null) return {"streamName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
 
@@ -447,10 +682,14 @@ strVal = "\"" str:ident "\"" {return str;}
 ident = alpha:[a-zA-Z]+dig:[0-9]* {return alpha.join("").concat(dig.join(""));}
 data_type = "JsNumber" / "JsString" / "JsBoolean" 
 
+predName1 = "inRange" 
+predName2n = "kNN"
+
 and = "and"
 or = "or"
 
 comma = ","
+dot = "."
 
 cp = ")"
 
