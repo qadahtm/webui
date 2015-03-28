@@ -209,7 +209,11 @@ var es; // event stream handle
 
 }
 
-
+var runningvis = {
+    timer:null,
+    uilines:[],
+    restart:true
+};
 // Doc load 
 $(document).ready(function() {
 
@@ -218,43 +222,55 @@ initializeMap();
 
 
 $("#title").click(function(){
-    var gran = getParameterByName("bolts");
-    var root = {};
-    root.parent = null;
-    root.cell = gmap;
-    root.lod = 1;
-    root.child = null;
-    bolts = buildGrid(root,"#0000FF", gran, gran, 1);
     
-    var gmbr = createMBR(gmap);
-    var req = {
-        minX:gmbr.south,
-        minY:gmbr.west,
-        maxX:gmbr.east,
-        maxY:gmbr.north
-    };
-    
-//    drawMBR(gmbr,"#FF0000");
-    
-    var urate = getParameterByName("urate");
-    console.log(urate);
-    var uilines = [];
-    setInterval(function(){
-        $.getJSON( "adaptive", gmbr,function( data ) {
-//        console.log($.toJSON(gmbr));
-//        console.log(data[data.length-1]);
-        if (data.length > 0){
-            for (i in uilines){
-                uilines[i].setMap(null);
-            }
-        }        
-        //gmap.fitBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
-        for (i in data){
-         uilines.push(drawMBR(data[i],data[i].color));          
+    if (runningvis.restart){
+        clearInterval(runningvis.timer);
+        
+        for (i in runningvis.uilines){
+            runningvis.uilines[i].setMap(null);
         }
+        removeChild(bolts)
+        
+        var gran = getParameterByName("bolts");
+        var root = {};
+        root.parent = null;
+        root.cell = gmap;
+        root.lod = 1;
+        root.child = null;
+        bolts = buildGrid(root,"#0000FF", gran, gran, 1);
 
-      });
-    }, urate);
+        var gmbr = createMBR(gmap);
+        var req = {
+            minX:gmbr.south,
+            minY:gmbr.west,
+            maxX:gmbr.east,
+            maxY:gmbr.north
+        };
+
+    //    drawMBR(gmbr,"#FF0000");
+
+        var urate = getParameterByName("urate");
+        console.log(urate);
+        
+
+        runningvis.timer = setInterval(function(){
+            $.getJSON( "adaptive", gmbr,function( data ) {
+    //        console.log($.toJSON(gmbr));
+    //        console.log(data[data.length-1]);
+            if (data.length > 0){
+                for (i in runningvis.uilines){
+                    runningvis.uilines[i].setMap(null);
+                }
+            }        
+            //gmap.fitBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
+            for (i in data){
+             runningvis.uilines.push(drawMBR(data[i],data[i].color));          
+            }
+
+          });
+        }, urate);
+        
+    }
     
 });
 // initialize 

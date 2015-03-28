@@ -225,7 +225,10 @@ object Webserver extends App with SimpleRoutingApp {
   val xmap = scala.collection.mutable.Map[Int,Double]()
   val ymap = scala.collection.mutable.Map[Int,Double]()
   
-  
+  var cnorth:String = ""
+  var csouth:String = ""
+  var ceast:String = ""
+  var cwest:String = ""
   
   
   startServer(interface = host, port = port) {
@@ -363,20 +366,37 @@ object Webserver extends App with SimpleRoutingApp {
          ctx =>
           {
             
-//            println(s"got a request for $n , $w , $s , $e")
-            val minx = w.toDouble
-            val miny = s.toDouble
-            val rx = (e.toDouble - minx)
-            val ry = n.toDouble - miny
-//            println(s"got a request for minx($minx) , miny($miny) , rangex($rx) , rangey($ry)")
-
-            if (xmap.isEmpty && ymap.isEmpty){
-              val side = 1000
-              for (i <- 0 to side){
-                xmap.put(i, minx+(i*(rx/side)))
-                ymap.put(i, miny+(i*(ry/side)))
-              }
+           val side = 1000
+           var recompute_mapping = false
+            if (cnorth == "") {
+              // fisrst request
+              recompute_mapping = true
             }
+            else{
+              //view bounds changed
+              if (cnorth != n || csouth != s || cwest != w || ceast != e) recompute_mapping = true              
+            }
+            
+             
+             if (recompute_mapping){
+               //            println(s"got a request for $n , $w , $s , $e")
+                val minx = w.toDouble
+                val miny = s.toDouble
+                val rx = (e.toDouble - minx)
+                val ry = n.toDouble - miny
+    //            println(s"got a request for minx($minx) , miny($miny) , rangex($rx) , rangey($ry)")
+                
+                 
+                for (i <- 0 to side){
+                  xmap.put(i, minx+(i*(rx/side)))
+                  ymap.put(i, miny+(i*(ry/side)))
+                }
+                
+                 cnorth = n; csouth = s; cwest = w; ceast =e;
+             }
+            
+
+            
 
            
             // process 
