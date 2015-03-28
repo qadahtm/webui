@@ -53,6 +53,9 @@ import spray.routing.authentication.UserPass
 import scala.concurrent.Future
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
+import scala.collection.JavaConversions._
+import spray.json.JsonParser
+import com.turn.platform.cheetah.partitioning.horizontal._
 
 object Webserver extends App with SimpleRoutingApp {
 
@@ -205,11 +208,31 @@ object Webserver extends App with SimpleRoutingApp {
       }
     }
 
+  import experiments._
+  
+  val costEstimator = WebDemo2.getDefaultCostEstimator()
+  var solution = new Solution()
+  val k = 100
+  WebDemo2.dynamic = new DynamicPartitioning(costEstimator, k, 1000)
+  //WebDemo2.solvePartitioning(solution, WebDemo2.dynamic.initialPartitions());
+ WebDemo2.dynamic.initialPartitions()
+   
+  val aqwaqueries = WebDemo2.getSerialQLoad()  
+  var i:Int = 0
+  var p:Partition = aqwaqueries(i)
+  
+  // mapping demo to latlng 
+  val xmap = scala.collection.mutable.Map[Int,Double]()
+  val ymap = scala.collection.mutable.Map[Int,Double]()
+  
+  
+  
+  
   startServer(interface = host, port = port) {
     getFromDirectory("ui/public") ~
-      getAvailableDataFiles ~
-      getAllStreamSourcesRoute ~
-      streamSourcesControlRoute ~
+//      getAvailableDataFiles ~
+//      getAllStreamSourcesRoute ~
+//      streamSourcesControlRoute ~
       path("data") {
         get {
           complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, """ {"key":"value"} """)))
@@ -335,6 +358,82 @@ object Webserver extends App with SimpleRoutingApp {
 
           }
       } ~
+      path("adaptive") {
+        parameters('north, 'west, 'south, 'east) { (n, w, s, e) => {
+         ctx =>
+          {
+            
+//            println(s"got a request for $n , $w , $s , $e")
+            val minx = w.toDouble
+            val miny = s.toDouble
+            val rx = (e.toDouble - minx)
+            val ry = n.toDouble - miny
+//            println(s"got a request for minx($minx) , miny($miny) , rangex($rx) , rangey($ry)")
+
+            if (xmap.isEmpty && ymap.isEmpty){
+              val side = 1000
+              for (i <- 0 to side){
+                xmap.put(i, minx+(i*(rx/side)))
+                ymap.put(i, miny+(i*(ry/side)))
+              }
+            }
+
+           
+            // process 
+           
+//            if (i % 100 ==0) {
+//
+//                WebDemo2.lines.clear()
+//                WebDemo2.addRectangle(p);
+//                solution = new Solution();
+//                WebDemo2.solvePartitioning(solution, WebDemo2.dynamic.currentPartitions);
+//                WebDemo2.updatePartitionsSolution(solution);
+//                WebDemo2.updatePartitions(solution.toString());
+//                
+//            }
+            WebDemo2.dynamic.processNewQuery(aqwaqueries(i));
+                 
+            val ps = scala.collection.mutable.ArrayBuffer[Partition]()
+                ps ++= WebDemo2.dynamic.currentPartitions
+            
+            // send query load    
+//            val res = aqwaqueries.subList(0, 100).map{p => {
+//              JsObject("north" -> JsNumber(ymap.get(p.getTop()).get)
+//                       ,"south" -> JsNumber(ymap.get(p.getBottom()).get)
+//                       ,"west" -> JsNumber(xmap.get(p.getLeft()).get)
+//                       ,"east" -> JsNumber(xmap.get(p.getRight()).get)
+//                       ,"color" -> JsString("#FF0000")
+//                      )
+//            }}
+            
+            val res = ps.map{p => {
+              JsObject("north" -> JsNumber(ymap.get(p.getTop()).get)
+                       ,"south" -> JsNumber(ymap.get(p.getBottom()).get)
+                       ,"west" -> JsNumber(xmap.get(p.getLeft()).get)
+                       ,"east" -> JsNumber(xmap.get(p.getRight()).get)
+                       ,"color" -> JsString("#000000")
+                      )
+            }}
+            // add query here
+            res += JsObject("north" -> JsNumber(ymap.get(aqwaqueries(i).getTop()).get)
+                     ,"south" -> JsNumber(ymap.get(aqwaqueries(i).getBottom()).get)
+                     ,"west" -> JsNumber(xmap.get(aqwaqueries(i).getLeft()).get)
+                     ,"east" -> JsNumber(xmap.get(aqwaqueries(i).getRight()).get)
+                     ,"color" -> JsString("#FF0000")
+                    )
+            
+            i = i + 1
+            if (i == aqwaqueries.size()) i =0;
+            p = aqwaqueries(i)
+
+            val resp = JsArray(res.toVector)
+//            println("sending out "+res.size+" rects")
+//            println(resp.toString())
+            val hres = HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, resp.toString()))
+            ctx.complete(hres)
+          }
+        }  }              
+      } ~
       path("berlinmod-trip-stream") {
         ctx =>
           {
@@ -351,7 +450,7 @@ object Webserver extends App with SimpleRoutingApp {
           {
             ctx =>
               {
-
+              
                 val aprops = Props(classOf[MBRStreamer], ctx.responder, new MBR(n.toDouble, w.toDouble, s.toDouble, e.toDouble), EventStreamType)
                 val streamer = system.actorOf(aprops)
               }

@@ -1,6 +1,6 @@
 import AssemblyKeys._
 
-name := "WebUI"
+name := "TornadoWebUI"
 
 version := "0.1"
 
@@ -51,6 +51,7 @@ libraryDependencies ++= Seq(
  "org.apache.spark" %% "spark-streaming" % "1.1.0" %  "provided",
   "org.apache.spark" %% "spark-streaming-kafka" % "1.1.0" %  "provided",
   "org.apache.spark" %% "spark-streaming-twitter" % "1.1.0" %  "provided",
+  "org.apache.hadoop"        % "hadoop-core"       % "0.20.2",
   "joda-time"		    % "joda-time" 		% "latest.integration",
   "org.joda" 			% "joda-convert" 	% "latest.integration",
   "log4j" % "log4j" % "1.2.14",
