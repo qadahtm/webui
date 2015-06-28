@@ -1,0 +1,87 @@
+#map-canvas { height: 50em}
+
+#visholder{
+    width: 22em;
+    height: 22em;
+}
+
+#controlpanel2 {
+    position:relative;width:100%;z-index:5;
+    /*background-color:#B3D1FF;*/
+    background-color: black;
+    display: block;
+    height: 8em;
+    /*overflow: scroll;*/
+}
+#side {
+    padding: 1em;
+    display: block;
+    /*width:14em;*/
+    width:24em;
+    height: 100%;
+    z-index: 5;
+    float: left;
+}
+#logo{
+    display: block;
+    width: 14em;
+    height: 100%;
+    background-color: black;
+    float: left;
+}
+
+#logo img {
+
+    width: 14em;
+    flaot:left;
+}
+
+/* Styling code for display purposes */
+.jsDump {
+    overflow: auto;
+    /*max-height: 20em;*/
+    margin: 0;
+    padding: .5em 1em;
+    border: 2px solid silver;
+    border-top: none;
+    background-color: #f0f0f0;
+    display: block;
+    font-family: monospace;
+    white-space: pre;
+    width:auto;
+}
+
+#syslog {
+    /*background-color: #CCCCCC;*/
+    height: 16em;    
+    overflow: scroll;
+}
+
+#buttonPanel {
+    /*float:left;*/
+/*    
+    padding-bottom: 0em;  
+    padding-right: 0em;    */  
+    /*height: 10em;*/
+}
+
+.CodeMirror {
+    height: 10em;
+}
+#textEntry {
+/*  float: left;
+  width: 68em;*/
+}
+
+.hidden {
+    display: none;
+}
+
+/*#buttonPanel span{
+    color: white;
+
+}*/
+
+.predicateList span {
+
+}

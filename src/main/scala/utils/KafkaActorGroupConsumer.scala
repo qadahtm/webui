@@ -12,6 +12,7 @@ import scala.collection.JavaConverters._
 import akka.actor.Props
 import kafka.serializer.StringDecoder
 import akka.actor.ActorRef
+import kafka.javaapi.consumer.ConsumerConnector
 
 object KafkaActorGroupConsumer extends App {
 
@@ -35,6 +36,11 @@ object KafkaActorGroupConsumer extends App {
 }
 
 object KafkaConsumerHelper {
+  
+  def createKafkaConsumer(zk: String, cgid: String, topic: String) = {
+    val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
+    kafka.consumer.Consumer.createJavaConsumerConnector(conf);    
+  }
 
   def startKafkaConsumer(zk: String, cgid: String, topic: String, sys: ActorSystem, target: ActorRef) = {
     val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
@@ -44,7 +50,7 @@ object KafkaConsumerHelper {
     val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
     val streams = consumerMap.get(topic)
 
-    val aprops = Props(classOf[KafkaStringConsumer], streams.get(0), target)
+    val aprops = Props(classOf[KafkaStringConsumer], consumer, streams.get(0), target)
     val c = sys.actorOf(aprops)
 
     c ! "checkMsgs"
@@ -66,15 +72,20 @@ object KafkaConsumerHelper {
 
 case class KafkaStringMessage(val x: String) extends Serializable
 
-class KafkaStringConsumer(val stream: KafkaStream[String, String], val target: ActorRef) extends Actor with ActorLogging {
+class KafkaStringConsumer(val consumer:ConsumerConnector, val stream: KafkaStream[String, String], val target: ActorRef) extends Actor with ActorLogging {
   implicit val ec = this.context.system.dispatcher
+  
+  
   def receive = {
     case "checkMsgs" => {
       val f = Future {
         stream.iterator.foreach(x => {
           //          log.info("KafkaMessage " + threadNum + " : " + x.message)
           target ! (new KafkaStringMessage(x.message))
+          // TODO: Need to commit offsets, validate that this works
+          consumer.commitOffsets()
         })
+        
       }
     }
     case _ => log.info("got a message")

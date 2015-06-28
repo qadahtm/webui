@@ -217,8 +217,6 @@
     // Doc load 
             $(document).ready(function () {
 
-
-
                 nodes = new vis.DataSet();
                 edges = new vis.DataSet();
 
@@ -237,8 +235,7 @@
                     }
                 };
                 var network = new vis.Network(container, data, options);
-                ;
-
+                
                 /** Parser Code **/
 
                 var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim(), uiState);
@@ -279,8 +276,9 @@
                 /**     **/
 
                 // Intialize google maps
-                google.maps.event.addDomListener(window, 'load', initialize);
-
+//                google.maps.event.addDomListener(window, 'load', initialize);
+                initialize()
+                getDemoData();
                 
                 $('#test').click(function (event) {
                     var url = '';
@@ -501,6 +499,14 @@
             }
             
             
+            function getDemoData(){
+                var skydeck = $.parseJSON('{"lng":-87.6358852,"tags":[{"k":"name","v":"SkyDeck Chicago"},{"k":"operator","v":"Willis Tower"},{"k":"tourism","v":"attraction"}],"ts":"2015-03-19T19:48:41Z","nid":"2311635030","lat":41.8786383}');
+                console.log(skydeck.lng);
+                console.log(skydeck.lat);
+                gmap.setCenter({lat: 41.8786383, lng: -87.6358852});
+                gmap.setZoom(14);
+            }
+            
             function optimizeQueryPlan(plan){
                 console.log("optimizing : "+$.toJSON(plan));
                 var oper = plan;
@@ -666,10 +672,17 @@
 
                 <div id="tabs-4">
                     <div id="textEntry" style="">
+                        <textarea id="textData" style="width:840px;height: 100px;">REGISTER QUERY q1 AS
+REGISTER QUERY q1 AS
+SELECT * FROM OSM_Data AS O, Tweets AS T
+WHERE WITHIN_DISTANCE(O.loc,T.loc,1)
+and CONTAINS(O.tags,"attraction")
+and OVERLAPS(O.tags, T.text);</textarea>
+<!--                        
                         <textarea id="textData" style="width:840px;height: 100px; font-size:larger;">run query test as
 select * 
 from places as p1
-where p1.text = 'restaurants';</textarea>
+where p1.text = 'restaurants';<textarea id="textData" style="width:840px;height: 100px; font-size:larger;">-->
                     </div>
                     <div id="buttonPanel">
                         <button id="compileSQL" class="button">Parse</button>  
@@ -711,6 +724,11 @@ where p1.text = 'restaurants';</textarea>
             <div style="position:relative" id="clist"></div>
         </div>
         <div id="side">
+            <div id="queryOutput">
+                <ul id="qAnswers">
+                    <li>No points</li>
+                </ul>
+            </div>
             <div class="predicateList">
                 <span>Focal points</span>
                 <ul id="knnList">
@@ -740,7 +758,7 @@ where p1.text = 'restaurants';</textarea>
 
 
         <div id="SyncSQLGrammar" style="display:none;">
-            /*
+              /*
 * Grammar for parsing SyncSQL
 * Currently Implemented:
 *  - Register Source Statement
@@ -779,16 +797,17 @@ where s1.rid = "r1" and s2.roomTemp = 3;
         return uiState.resolveRangePredVar(v);
      }
      else return null;
-   }
+   }   
+
 }
 
 start = sqls:sqlstmt spp ";" sps {return sqls}
 sqlstmt = regstmt / createviewstmt 
 
-createviewstmt = t:(("create" spp "streamed") / "register" / "run") spp ("view" / "query") spp cn:ident spp as spp sel:selectstmt {var res = {};
+createviewstmt = t:(("CREATE" spp "STREAMED") / ("REGISTER" / "register") / ("RUN" / "run")) spp ("VIEW" / ("QUERY" / "query")) spp cn:ident spp as spp sel:selectstmt {var res = {};
 
-if (t === "register") res.type = "query";
-if (t === "run") res.type = "squery";
+if (t === "register" || t === "REGISTER") res.type = "cquery";
+if (t === "run" || t === "RUN") res.type = "squery";
 
 res.name=cn; 
 //res.pl = sel.pl; res.fc = sel.fc; res.wc = sel.wc;
@@ -799,6 +818,7 @@ res.plan = {};
 var child;
 if (sel.fc.length == 1){
 if (sel.wc != null){
+
 child = {"type":"select","conditions":sel.wc.conditions};
 child.children = [sel.fc.pop()];
 }
@@ -809,6 +829,10 @@ sel.pl.children = [child]
    res.plan =sel.pl;
 }
 else{
+
+if (sel.wc != null){
+
+
 // sel.fc.length == 2
 var leftleaf = sel.fc.pop();
 var rightleaf = sel.fc.pop();
@@ -816,13 +840,16 @@ var left = leftleaf;
 var right = rightleaf;
 
 var jconds = [];
+
 var i = sel.wc.conditions.length-1;
+console.log(sel.wc.conditions);
 while (sel.wc.conditions.length){
 
- var sn = sel.wc.conditions[i][0].streamName;
-var cleft = sel.wc.conditions[i][0];
-var cright = sel.wc.conditions[i][2];
+var sn = sel.wc.conditions[i].lhs.sourceName;
+var cleft = sel.wc.conditions[i].lhs;
+var cright = sel.wc.conditions[i].rhs;
 if ($.isPlainObject(cleft) && $.isPlainObject(cright)){
+
 // a join condition
 var jcond = sel.wc.conditions.splice(i,1);
 jconds.push(jcond[0]);
@@ -851,12 +878,13 @@ var join = {"type":"join","conditions":jconds,"children":[left,right]};
    sel.pl.children = [join]
    res.plan =sel.pl;
 }
+}
 
 return res;}
 
 /****** BEGIN Select Statement *****/
 
-selectstmt = "select" spp pl:projectList spp fc:fromclause wc:(spp whereclause)?
+selectstmt = ("select" / "SELECT") spp pl:projectList spp fc:fromclause wc:(spp whereclause)?
 {var res = {};
 res.pl = pl;
 res.fc = fc;
@@ -868,7 +896,7 @@ return res;}
 
 projectList = pa:"*" {return {"type":"project","attributes":[pa]}}
 
-fromclause = "from" sp sl:sourceList {return sl;}
+fromclause = ("from" / "FROM") sp sl:sourceList {return sl;}
 
 sourceList = s1:sourceName sps sl:(comma sps sourceList)? 
 {var res = []; 
@@ -882,23 +910,38 @@ if (a != null) res.alias = a[3];
 if (sync != null) res.sync = sync[3];
 return res;}
 
-whereclause = "where" spp cl:condList {return {"conditions":cl};}
+whereclause = ("where" / "WHERE") spp cl:condList {return {"conditions":cl};}
 
 condList = c1:scondition sps cl:("and" sp condList)? {var res = []; res.push(c1); if (cl != null){
 for (i in cl[2]) res.push(cl[2][i]);
 }; return res;}
 
-scondition = lhs:cident sp cop:coper sp rhs:cident {return [lhs,cop,rhs];}
-/ lhs:cident sp cop:coper sp rhs:numVal {return [lhs,cop,rhs];}
-/ lhs:cident sp cop:coper sp rhs:strVal {return [lhs,cop,rhs];}
-/ obj:ident sps dot sps pname:predName1 sps op sps parg:ident  sps cp {return [obj,pname,bindVar(pname,parg)];}
+scondition = lhs:cident sp cop:coper sp rhs:cident 
+{return [lhs,cop,rhs];}
+/ lhs:cident sp cop:coper sp rhs:numVal 
+{return [lhs,cop,rhs];}
+/ lhs:cident sp cop:coper sp rhs:strVal 
+{return [lhs,cop,rhs];}
+/ obj:ident sps dot sps pname:predName1 sps op sps parg:ident  sps cp 
+{return [obj,pname,bindVar(pname,parg)];}
 / obj:ident sps dot sps pname:predName2n sps op sps kval:numVal sps comma sps parg:ident  sps cp {return [obj,pname,kval,bindVar(pname,parg)];}
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:ident sps cp 
+{return {argc:2,jcond:false,op:pname,lhs:obj,rhs:bindVar(pname,parg)};}
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:cident sps cp 
+{return {argc:2,jcond:true,op:pname,lhs:obj,rhs:parg};}
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:strVal sps cp 
+{return {argc:2,jcond:false,op:pname,lhs:obj,rhs:parg[1]};}
+/ pname:(func3p) sps op sps obj1:cident sps comma sps obj2:cident sps comma sps parg:numVal sps cp 
+{return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
+//{return [obj1,obj2,pname,bindVar(pname,parg)];}
 
-cident = sa:(ident ".")? ca:ident { if (sa != null) return {"streamName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
+
+
+cident = sa:(ident ".")? ca:ident { if (sa != null) return {"sourceName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
 
 coper = "=" / ">" / "<" / ">=" / "<=" / "!="
 
-as = "as"
+as = "as" / "AS"
 
 /****** END Select Statement *****/
 
@@ -926,15 +969,25 @@ numVal = dig:[0-9]+ {return new Number(dig.join("")).valueOf();}
 strVal = "\"" str:ident "\"" / "'" str:ident "'" {return str;}
 
 
-
-ident = alpha:[a-zA-Z]+dig:[0-9]* {return alpha.join("").concat(dig.join(""));}
+ident = alpha:[a-zA-Z_]+dig:[0-9]* {return alpha.join("").concat(dig.join(""));}
 data_type = "JsNumber" / "JsString" / "JsBoolean" 
 
-predName1 = "inRange" 
-predName2n = "kNN"
+//omem = rel:ident sps dot sps attr:ident { return {"sourceName":rel,"attrName":attr}}
 
-and = "and"
-or = "or"
+predName1 = 
+"inRange" 
+
+predName2n = 
+"kNN"
+
+func1p = "1p"
+
+func2p = "INSIDE" / "CONTAINS" / "OVERLAPS"
+
+func3p = "WITHIN_DISTANCE"
+
+and = "and"/ "AND"
+or = "or" / "OR"
 
 comma = ","
 dot = "."
