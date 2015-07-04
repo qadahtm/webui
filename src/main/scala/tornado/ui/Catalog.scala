@@ -29,6 +29,8 @@ import utils.Subscribe
 import akka.actor.ActorRef
 import utils.Helper
 import utils.KafkaUtils
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.KafkaProducer
 
 case class OutputEntry(val ts: Long, val entry: JsObject)
 
@@ -40,8 +42,18 @@ object Catalog {
 
   val queryState = mutable.Map[String, ActorRef]()
   
-  val producer = KafkaUtils.createStringKafkaProducer(Helper.getConfig().getString("kafka.producer.broker-list"))
-
+  var producer : KafkaProducer[String,String] = null
+  
+  if (Helper.getConfig().getBoolean("kafka.enabled")) {
+    producer = KafkaUtils.createStringKafkaProducer(Helper.getConfig().getString("kafka.producer.broker-list"))   
+  }
+  
+  def KafkaProducerSend(rec: ProducerRecord[String,String]) : Unit = {
+    if (Helper.getConfig().getBoolean("kafka.enabled")) {
+      producer.send(rec)
+    }
+  }
+  
   def getRegisteredCQueries: JsArray = {
     JsArray(json_cqueries.keys.map { JsString(_) }.toVector)
   }

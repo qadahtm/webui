@@ -172,9 +172,9 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 / obj:ident sps dot sps pname:predName1 sps op sps parg:ident  sps cp 
 {return [obj,pname,bindVar(pname,parg)];}
 / obj:ident sps dot sps pname:predName2n sps op sps kval:numVal sps comma sps parg:ident  sps cp {return [obj,pname,kval,bindVar(pname,parg)];}
-/ pname:(func2p) sps op sps obj:cident sps comma sps parg:ident sps cp 
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:aident sps cp 
 {return {argc:2,jcond:false,op:pname,lhs:obj,rhs:bindVar(pname,parg)};}
-/ pname:(func2p) sps op sps obj:cident sps comma sps parg:cident sps cp 
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:aident sps cp 
 {return {argc:2,jcond:true,op:pname,lhs:obj,rhs:parg};}
 / pname:(func2p) sps op sps obj:cident sps comma sps parg:strVal sps cp 
 {return {argc:2,jcond:false,op:pname,lhs:obj,rhs:parg[1]};}
@@ -182,7 +182,7 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 {return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
 
 
-
+aident = "@" ident / cident
 cident = sa:(ident ".")? ca:ident { if (sa != null) return {"sourceName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
 
 coper = "=" / ">" / "<" / ">=" / "<=" / "!="

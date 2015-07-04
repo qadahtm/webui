@@ -62,13 +62,12 @@ import spray.routing.directives.ParamDefMagnet.apply
 import utils.AppJsonProtocol._
 import utils._
 import spray.json.JsonParser
+import tornado.ui.Catalog
 
 object Ready
 object SendReady
 
-
-
-class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsValue, EventStreamType:MediaType ) extends Actor with ActorLogging {
+class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsValue, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   var count = 0
   val max = 200
@@ -140,7 +139,71 @@ class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsV
 
 }
 
-class MBRStreamer(peer: ActorRef, mbr: MBR, EventStreamType:MediaType) extends Actor with ActorLogging {
+class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) extends Actor with ActorLogging {
+
+  log.info("starting respnse streaming ")
+  val sampleTweetsFile = Helper.getConfig().getString("webserver.data.sampleTweets")
+  var data = scala.io.Source.fromFile(sampleTweetsFile).getLines()
+
+  context.watch(peer)
+
+  val streamStart = JsObject("type" -> JsString("stream-start"))
+
+  val responseStart = HttpResponse(entity = HttpEntity(EventStreamType.withCharset(HttpCharsets.`UTF-8`), Helper.createSSE("ping", streamStart.toString)))
+
+  peer ! ChunkedResponseStart(responseStart).withAck(Ready)
+
+  implicit val ec = this.context.system.dispatcher
+
+  def receive = {
+    case Ready => {
+      this.context.system.scheduler.scheduleOnce(500 milliseconds, self, SendReady)
+    }
+    case SendReady => {
+      val qn = Catalog.json_cqueries.keys.size
+      if (qn > 0) {
+        val qname = Catalog.json_cqueries.keys.toList(scala.util.Random.nextInt(qn))
+        val cv = Catalog.json_cqueries.get(qname).get.fields.get("currentView").get
+        val bounds = cv.asJsObject.getFields("north", "west", "south", "east").map { _.asInstanceOf[JsNumber].value }
+        val rlng = bounds(1).toDouble + (scala.math.abs(bounds(3).toDouble - bounds(1).toDouble) * scala.util.Random.nextDouble())
+        val rlat = bounds(2).toDouble + (scala.math.abs(bounds(0).toDouble - bounds(2).toDouble) * scala.util.Random.nextDouble())
+
+        var txt= ""
+        if (data.hasNext) {
+          txt = data.next().split(",")(5)
+        }
+        else {
+          data =  scala.io.Source.fromFile(sampleTweetsFile).getLines()
+        }
+        
+        val resp = JsObject("qname" -> JsString(qname),
+          "type" -> JsString("output"),
+          "point" -> JsObject("lat" -> JsNumber(rlat), "lng" -> JsNumber(rlng)),
+          "text" -> JsString(txt))
+
+        val newChunk = MessageChunk(Helper.createSSE("ping", resp.toString))
+
+        peer ! newChunk.withAck(Ready)
+
+      } else {
+        this.context.system.scheduler.scheduleOnce(900 milliseconds, self, Ready)
+      }
+
+    }
+
+    case Http.PeerClosed => {
+      log.info("Peer terminated, ending respnse streaming ")
+      self ! PoisonPill
+    }
+
+    case x: Any => {
+      log.info("Receieved something unexpected: " + x.getClass.toString)
+    }
+  }
+
+}
+
+class MBRStreamer(peer: ActorRef, mbr: MBR, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting respnse streaming ")
 
@@ -194,7 +257,7 @@ class MBRStreamer(peer: ActorRef, mbr: MBR, EventStreamType:MediaType) extends A
 
 }
 
-class Streamer(peer: ActorRef, EventStreamType:MediaType) extends Actor with ActorLogging {
+class Streamer(peer: ActorRef, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting respnse streaming ")
 
@@ -248,8 +311,7 @@ class Streamer(peer: ActorRef, EventStreamType:MediaType) extends Actor with Act
 
 }
 
-
-class BerlinMODTripStreamer(peer: ActorRef, filepath: String, dataType: String, freq: Int, EventStreamType:MediaType) extends Actor with ActorLogging {
+class BerlinMODTripStreamer(peer: ActorRef, filepath: String, dataType: String, freq: Int, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting respnse streaming ")
 
@@ -336,7 +398,7 @@ class BerlinMODTripStreamer(peer: ActorRef, filepath: String, dataType: String, 
 
 }
 
-class BerlinMODQueryStreamer(peer: ActorRef, filepath: String,EventStreamType:MediaType) extends Actor with ActorLogging {
+class BerlinMODQueryStreamer(peer: ActorRef, filepath: String, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting respnse streaming ")
 
@@ -399,7 +461,7 @@ class BerlinMODQueryStreamer(peer: ActorRef, filepath: String,EventStreamType:Me
 
 }
 
-class TwitterDemoResultStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => String, EventStreamType:MediaType) extends Actor with ActorLogging {
+class TwitterDemoResultStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => String, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting to stream twitter results ")
 
@@ -448,7 +510,7 @@ class TwitterDemoResultStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: Str
 
 }
 
-class TwitterQueryStreamer(peer: ActorRef, filepath: String, qtype: String, EventStreamType:MediaType) extends Actor with ActorLogging {
+class TwitterQueryStreamer(peer: ActorRef, filepath: String, qtype: String, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting to stream twitter queries ")
 
@@ -507,7 +569,7 @@ class TwitterQueryStreamer(peer: ActorRef, filepath: String, qtype: String, Even
 
 }
 
-class BufferingStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => JsValue, EventStreamType:MediaType) extends Actor with ActorLogging {
+class BufferingStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => JsValue, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting to stream string results ")
 
@@ -534,7 +596,7 @@ class BufferingStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => J
   def receive = {
     case SendReady => {
       while (!buffer.isEmpty) {
-//        log.info("About to send "+buffer.size+" responses")
+        //        log.info("About to send "+buffer.size+" responses")
         val resp = JsObject("type" -> JsString("output"), "data" -> JsonParser(buffer.dequeue))
         val newChunk = MessageChunk(Helper.createSSE("ping", resp.toString))
         peer ! newChunk.withAck(SendReady)
@@ -542,7 +604,7 @@ class BufferingStreamer(peer: ActorRef, pubsub: ActorRef, formatSSE: String => J
 
     }
 
-    case msg:String => {
+    case msg: String => {
       buffer.enqueue(msg)
       if (buffer.size == 1) self ! SendReady
     }

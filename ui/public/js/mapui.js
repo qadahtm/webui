@@ -154,34 +154,88 @@ function initialize() {
             // console.log($("#regQueriesList li.empty").length);
             // console.log($("#regQueriesList li").length);
             //syslogAddStatus(data);
-            if ($("#regQueriesList li.empty").length > 0) $("#regQueriesList").empty();
+           // console.log(data.length);
+            var qlist = $("#regQueriesList")
+            var emptyState = '<li class="list-group-item empty">No registered continuous queries</li>';
+            if (data.length > 0) {
+                
+                if (qlist.find("li.empty").length > 0) qlist.empty();    
 
-            if ($("#regQueriesList li").length != data.length) {
-                $("#regQueriesList").empty();
-                for (var i = 0; i < data.length; i++) {
-                    // console.log(data[i]);
-                    var removeIcon = $('<span class="col-md-1 glyphicon glyphicon-remove"></span>');
-                    var djo = {};
-                    djo.name = data[i];
+                if (qlist.find("li").length != data.length) {
+                    for (var i = 0; i < data.length; i++) {
+                        // console.log(data[i]);
+                        var removeIcon = $('<span class="col-md-1 glyphicon glyphicon-remove"></span>');
+                        var djo = {};
+                        djo.name = data[i];
 
-                    removeIcon.click(function(){
-                        $.ajax("tornado/queries",{
-                            method: "DELETE",
-                            data: $.toJSON(djo)
-                        }).done(function(resp){
-                            console.log(resp);
-                            syslogAddStatus(resp);
+                        removeIcon.click(function(){
+                            $.ajax("tornado/queries",{
+                                method: "DELETE",
+                                data: $.toJSON(djo)
+                            }).done(function(resp){
+                                console.log(resp);
+                                syslogAddStatus(resp);
+                            });
                         });
-                    });
-                    var qname = $('<p class="col-md-11">'+data[i]+'</p>')
-                    $("#regQueriesList").append($('<li class="list-group-item"></li>').append(removeIcon).append(data[i]));
-                };
-            }     
+                        var qname = $('<p class="col-md-11">'+data[i]+'</p>')
+                        qlist.append($('<li class="list-group-item qdata"></li>').append(removeIcon).append(data[i]));
+                    };
+                }     
+
+            }
+            else{
+                if (qlist.find("li.empty").length == 0) {
+                    qlist.empty();    
+                    qlist.append($(emptyState));
+                }
+                
+            }
 
         });
     },500);
 
-    
+    uiState.es = new EventSource("/mock-output-stream");
+
+    uiState.es.onmessage = function(e) {
+        var sse = $.parseJSON(e.data);
+        //console.log(sse);
+        //console.log("received an sse : "+$.toJSON(sse)); 
+        if (sse.type == "output") {
+
+            var color = randomColor().slice(1).toUpperCase();
+            var iconUrl = createColoredMarker(color);
+            // console.log(iconUrl);
+            // draw on map
+            var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);
+            var marker1 = new google.maps.Marker({
+                  position: myLatlng1,
+                  map: gmap,
+                  icon: iconUrl,
+                  title:sse.text
+              });
+            var infowindow1 = new google.maps.InfoWindow({
+                  content: "<p>"+sse.text+"</p>"
+              });
+            google.maps.event.addListener(marker1,'click',function(){
+                infowindow1.open(gmap,marker1);                
+             });
+
+            // add to side listing
+            var outputlisting = $("#outputlisting")
+            if (outputlisting.find("li.empty").length  > 0) {
+                // list is empty but contains an info bullet, so make it empty
+                outputlisting.empty();                
+            }
+            var iconElem = $("<img src='"+iconUrl+"' />");
+            var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
+            var textCol = $("<p class='col-md-8' style='overflow-x:scroll;'>"+sse.text+"</p>");
+            var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
+            var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+            
+            outputlisting.append( listitem );
+
+        }
+    }
 
     var mapOptions = {
         // US 
@@ -329,7 +383,7 @@ $(document).ready(function () {
     $.ajax("grammar.txt").done(function(data){
         //console.log(data);
         uiState.grammartxt = data;
-        uiState.parser = PEG.buildParser(grammartxt, uiState);
+        uiState.parser = PEG.buildParser(data, uiState);
     })
 
     //console.log(grammartxt);
@@ -343,7 +397,7 @@ $(document).ready(function () {
     $('#submitSQL').click(function () {
         var ast = syncSQLparse(uiState.parser);
         var gmapView = createMBR(gmap);
-        console.log($.toJSON(gmapView));
+        // console.log($.toJSON(gmapView));
         ast.currentView = gmapView;
         //optimizeQueryPlan(ast.plan);
         $.ajax( "tornado/queries", {
@@ -351,16 +405,13 @@ $(document).ready(function () {
             data: $.toJSON(ast),
             dataType: "json"
         }).done(function(data){
-            console.log(data);
+            //console.log(data);
             syslogAddStatus(data);
         });
     });
 
     $("#compileSQL").click(function () {
         var ast = syncSQLparse(uiState.parser);
-        $.ajax("grammar.txt").done(function(data){
-            console.log(data);
-        });
 
         // console.log(ast);
         $("#dialog-vis").toggleClass("hidden");
@@ -714,9 +765,6 @@ function executeQueryOperator(oper){
     }
 }
 
-function executeOperator(oper,callback){
-    
-}
 
 
 

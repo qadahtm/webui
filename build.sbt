@@ -16,6 +16,7 @@ seq(
         ,"TwitterHBCExample" -> "examples.TwitterHBCExample"
         ,"Twitter4JExample" -> "tornado.examples.TwitterStreamAPI"
         ,"TornadoStormKafkaTest" -> "examples.TornadoStormKafkaTest"
+        ,"TestRandomTextGen" -> "tornado.ui.TestRandomTextGen"
         ,"StreamConroller" -> "utils.StreamController"    
 	),
         // Add custom settings here
@@ -43,6 +44,8 @@ resolvers ++= Seq(
   "Secured Central Repository" at "https://repo1.maven.org/maven2"
 )
 
+resolvers += Resolver.mavenLocal
+
 libraryDependencies ++= Seq(
   "com.typesafe.akka"  %% "akka-actor"       % "2.3.6",
   "com.typesafe.akka"  %% "akka-slf4j"       % "2.3.6",
@@ -69,10 +72,14 @@ libraryDependencies ++= Seq(
   "log4j" % "log4j" % "1.2.14"
 )
 
+libraryDependencies += "org.fluttercode.datafactory" % "datafactory" % "0.8"
+
 //libraryDependencies += "org.apache.kafka" %% "kafka" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j")
 libraryDependencies += "org.apache.kafka" %% "kafka" % "0.8.2.1" exclude("log4j","log4j")
 
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j")
+
+libraryDependencies += "abdn" % "SimpleNLG" % "4.4.7-SNAPSHOT"
 
 assemblySettings 
 

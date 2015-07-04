@@ -269,14 +269,21 @@
                 
                 /** Parser Code **/
 
-                var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim(), uiState);
+                // var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim(), uiState);
+
+                $.ajax("grammar.txt").done(function(data){
+                    //console.log(data);
+                    uiState.grammartxt = data;
+                    uiState.parser = PEG.buildParser(data, uiState);
+                })
 
                 $("#buttonPanel span").click(function (event) {
                     $("#textData").val($(this).attr('data'));
                 });
 
                 $('#submitSQL').click(function () {
-                    var ast = syncSQLparse(parser);
+                    // var ast = syncSQLparse(parser);
+                    var ast = syncSQLparse(uiState.parser);
                     console.log($.toJSON(ast));
                     $.ajax( "tornado/queries", {
                         method: "POST",
@@ -290,7 +297,8 @@
                 });
 
                 $("#compileSQL").click(function () {
-                    var ast = syncSQLparse(parser);
+                    var ast = syncSQLparse(uiState.parser);
+                    // var ast = syncSQLparse(parser);
                     // console.log(ast);
                     // $("#dialog-vis").toggleClass("hidden");
                     // $("#dialog-ast").dialog({

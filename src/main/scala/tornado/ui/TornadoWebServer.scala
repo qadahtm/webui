@@ -70,10 +70,11 @@ import scala.collection.JavaConversions._
 import spray.json.JsonParser
 import com.turn.platform.cheetah.partitioning.horizontal._
 import scala.io.Source
-import ui.BufferingStreamer
+import ui._
 import ui.KafkaTopicStreamer
 import spray.http.StatusCodes
 import org.apache.kafka.clients.producer.ProducerRecord
+
 
 object TornadoWebserver extends App with SimpleRoutingApp {
 
@@ -118,16 +119,18 @@ object TornadoWebserver extends App with SimpleRoutingApp {
   // keys will be tags and values will be list of spatial objects
 
   //val osm_data = scala.io.Source.fromFile("data/chicago-osm.json").getLines.map { JsonParser(_).asJsObject };
-  Catalog.datasources += ("OSM_Data" -> LocalFileDataSource("chicago-osm","data/chicago-osm.json"))
+//  Catalog.datasources += ("OSM_Data" -> LocalFileDataSource("chicago-osm","data/chicago-osm.json"))
   
     //Twitter data load
-  Catalog.datasources += ("HisTwitter" -> LocalFileDataSource("twitter_chicago","data/tweet_us_2013_1_3.chicago.csv"))
+//  Catalog.datasources += ("HisTwitter" -> LocalFileDataSource("twitter_chicago","data/tweet_us_2013_1_3.chicago.csv"))
   
-  val tweets = scala.io.Source.fromFile("data/tweet_us_2013_1_3.chicago.csv").getLines()
+//  val tweets = scala.io.Source.fromFile("data/tweet_us_2013_1_3.chicago.csv").getLines()
   val trate = 10;
 
   // Moving object data
   val mod = 2;
+  
+ 
 
   val getAvailableDataFiles = path("datafiles") {
     get {
@@ -196,9 +199,14 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                       ret = createStatusResponse("error","query is already registered : "+qname)
                     }
                     case None => {
+                      // register query
                       Catalog.json_cqueries += (qname -> jo.asJsObject)
-                      val rec = new ProducerRecord[String,String](Helper.getConfig().getString("kafka.producer.topic"),qname,jstr)
-                      Catalog.producer.send(rec)
+                      
+                      // publish to Kafka
+                      if (Helper.getConfig().getBoolean("kafka.enabled")) {
+                        val rec = new ProducerRecord[String,String](Helper.getConfig().getString("kafka.producer.topic"),qname,jstr)
+                        Catalog.KafkaProducerSend(rec)  
+                      }
                       
                       ret = createStatusResponse("success","query registered : "+qname)
                     }
@@ -306,6 +314,14 @@ object TornadoWebserver extends App with SimpleRoutingApp {
             //            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "output", (formatSSETweets _), EventStreamType)
             log.info("Creating a subscription to " + resultPubSubActor)
             val aprops = Props(classOf[BufferingStreamer], ctx.responder, resultPubSubActor, (Helper.formatSSETweets _), EventStreamType)
+            val streamer = system.actorOf(aprops)
+          }
+      } ~
+      path("mock-output-stream") {
+        ctx =>
+          {
+            log.info("Mocking an output stream")
+            val aprops = Props(classOf[RandomPointWithTextStreamer], ctx.responder, EventStreamType)
             val streamer = system.actorOf(aprops)
           }
       } ~
