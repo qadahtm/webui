@@ -31,6 +31,7 @@ import utils.Helper
 import utils.KafkaUtils
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.KafkaProducer
+import java.util.concurrent.atomic.AtomicLong
 
 case class OutputEntry(val ts: Long, val entry: JsObject)
 
@@ -41,6 +42,8 @@ object Catalog {
   val datasources = mutable.Map[String, DataSource]()
 
   val queryState = mutable.Map[String, ActorRef]()
+  
+  var kafkaConsumerCount:AtomicLong = new AtomicLong(0)
   
   var producer : KafkaProducer[String,String] = null
   

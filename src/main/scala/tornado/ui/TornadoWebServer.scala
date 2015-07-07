@@ -74,6 +74,7 @@ import ui._
 import ui.KafkaTopicStreamer
 import spray.http.StatusCodes
 import org.apache.kafka.clients.producer.ProducerRecord
+import spray.json.JsBoolean
 
 
 object TornadoWebserver extends App with SimpleRoutingApp {
@@ -259,6 +260,13 @@ object TornadoWebserver extends App with SimpleRoutingApp {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
           "{\"status\":\"ok\"}")))     
   }
+  
+  val systemConfig = path("tornado" / "config") {
+    val kafkaConf = JsObject("enabled" -> JsBoolean(Helper.getConfig().getBoolean("kafka.enabled")))
+    val resp = JsObject("kafka" -> kafkaConf)
+    complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
+          resp.toString())))
+  }
 
   /// end Demo mode
 
@@ -291,6 +299,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       tornado_queries ~
       tornado_output_cqueries ~
       serverMessages ~
+      systemConfig ~
       path("data") {
         parameters('north, 'west, 'south, 'east) { (n, w, s, e) =>
           {
@@ -350,6 +359,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       path("kafka" / "output-stream") {
         ctx =>
           {
+            log.info("Kafka output stream")
             val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "output", (Helper.selfString _), EventStreamType)
             val streamer = system.actorOf(aprops)
 

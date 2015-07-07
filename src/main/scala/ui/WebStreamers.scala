@@ -69,7 +69,7 @@ object SendReady
 
 class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsValue, EventStreamType: MediaType) extends Actor with ActorLogging {
 
-  var count = 0
+  val id = Catalog.kafkaConsumerCount.incrementAndGet()
   val max = 200
 
   val kafkaQueue = scala.collection.mutable.Queue[String]()
@@ -77,7 +77,7 @@ class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsV
   val conf = ConfigFactory.parseFile(new File("application.conf"))
 
   val zk = conf.getString("kafka.zk")
-  val cgid = "cgid-web"
+  val cgid = "cgid-web-" + id
 
   context.watch(peer)
 

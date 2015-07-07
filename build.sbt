@@ -57,7 +57,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.12",
   "com.twitter" % "hbc-core" % "2.2.0",
   "com.twitter" % "hbc-twitter4j" % "2.2.0",  
-  "org.apache.storm" % "storm-core" % "0.9.5",
  "org.apache.spark" %% "spark-core" % "1.1.0" %  "provided",
  "org.apache.spark" %% "spark-streaming" % "1.1.0" %  "provided",
   "org.apache.spark" %% "spark-streaming-kafka" % "1.1.0" %  "provided",
@@ -74,12 +73,15 @@ libraryDependencies ++= Seq(
 
 libraryDependencies += "org.fluttercode.datafactory" % "datafactory" % "0.8"
 
-//libraryDependencies += "org.apache.kafka" %% "kafka" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j")
+libraryDependencies += "org.apache.storm" % "storm-core" % "0.9.5" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j") exclude("org.slf4j", "slf4j-log4j12") exclude("org.slf4j" , "log4j-over-slf4j")
+
+// we need zookeeper as dependency for some reason, TODO: Investigate why.
+//libraryDependencies += "org.apache.kafka" %% "kafka" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j") 
 libraryDependencies += "org.apache.kafka" %% "kafka" % "0.8.2.1" exclude("log4j","log4j")
 
-libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j")
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.8.2.1" exclude("org.apache.zookeeper","zookeeper") exclude("log4j","log4j") exclude("org.slf4j", "slf4j-log4j12") exclude("org.slf4j" , "log4j-over-slf4j")
 
-libraryDependencies += "abdn" % "SimpleNLG" % "4.4.7-SNAPSHOT"
+//libraryDependencies += "abdn" % "SimpleNLG" % "4.4.7-SNAPSHOT"
 
 assemblySettings 
 

@@ -194,12 +194,21 @@ function initialize() {
         });
     },500);
 
-    uiState.es = new EventSource("/mock-output-stream");
+    $.ajax("tornado/config").done(function(conf){
+        console.log(conf);
+        if (conf.kafka.enabled){
+            uiState.es = new EventSource("kafka/output-stream");
+        }
+        else {
+            uiState.es = new EventSource("/mock-output-stream");
+        }
 
-    uiState.es.onmessage = function(e) {
+        uiState.es.onmessage = function(e) {
+        console.log("got an sse");
         var sse = $.parseJSON(e.data);
-        //console.log(sse);
-        //console.log("received an sse : "+$.toJSON(sse)); 
+        console.log(e);
+        console.log(sse);
+        console.log($.toJSON(sse)); 
         if (sse.type == "output") {
 
             var color = randomColor().slice(1).toUpperCase();
@@ -236,6 +245,12 @@ function initialize() {
 
         }
     }
+    });
+    
+
+    
+
+    
 
     var mapOptions = {
         // US 
