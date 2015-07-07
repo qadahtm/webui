@@ -204,12 +204,18 @@ function initialize() {
         }
 
         uiState.es.onmessage = function(e) {
-        console.log("got an sse");
+        //console.log("got an sse");
         var sse = $.parseJSON(e.data);
-        console.log(e);
-        console.log(sse);
-        console.log($.toJSON(sse)); 
-        if (sse.type == "output") {
+        var ssetype = sse.type;
+        if (conf.kafka.enabled && (typeof sse.data) === "string"){
+            console.log(sse.data);    
+            sse = eval("(" + sse.data + ")");
+        }
+        // console.log(e);
+        // console.log(sse);
+        // console.log($.toJSON(sse)); 
+        
+        if (ssetype == "output") {
 
             var color = randomColor().slice(1).toUpperCase();
             var iconUrl = createColoredMarker(color);
