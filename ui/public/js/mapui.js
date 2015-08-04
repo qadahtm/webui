@@ -22,6 +22,9 @@ if (typeof (Storage) !== "undefined") {
 var uiState = {
     catalog:{
         queries:{
+            liststate:[],
+            keys:[],
+            vals:[],
             poller:null
         },
         datasources:{
@@ -32,7 +35,7 @@ var uiState = {
     rangeList: [],
     getRandomColor: function () {
         return randomColor({luminosity: 'light'});
-    },
+    },    
     resolveRangePredVar: function (v) {
         var i = 0;
         while (i < uiState.rangeList.length) {
@@ -145,54 +148,14 @@ function createPanelElement(panelClass, bodyContent){
 }
 
 
-
 function initialize() {
 
     //state listeners
-    uiState.catalog.queryStateListener = setInterval(function(){
-        $.ajax("tornado/queries").done(function(data){
-            // console.log($("#regQueriesList li.empty").length);
-            // console.log($("#regQueriesList li").length);
-            //syslogAddStatus(data);
-           // console.log(data.length);
-            var qlist = $("#regQueriesList")
-            var emptyState = '<li class="list-group-item empty">No registered continuous queries</li>';
-            if (data.length > 0) {
-                
-                if (qlist.find("li.empty").length > 0) qlist.empty();    
+    // uiState.catalog.queryStateListener = setInterval(function(){
+    //     refreshRegiesteredQueryList();
+    // },500);
 
-                if (qlist.find("li").length != data.length) {
-                    for (var i = 0; i < data.length; i++) {
-                        // console.log(data[i]);
-                        var removeIcon = $('<span class="col-md-1 glyphicon glyphicon-remove"></span>');
-                        var djo = {};
-                        djo.name = data[i];
-
-                        removeIcon.click(function(){
-                            $.ajax("tornado/queries",{
-                                method: "DELETE",
-                                data: $.toJSON(djo)
-                            }).done(function(resp){
-                                console.log(resp);
-                                syslogAddStatus(resp);
-                            });
-                        });
-                        var qname = $('<p class="col-md-11">'+data[i]+'</p>')
-                        qlist.append($('<li class="list-group-item qdata"></li>').append(removeIcon).append(data[i]));
-                    };
-                }     
-
-            }
-            else{
-                if (qlist.find("li.empty").length == 0) {
-                    qlist.empty();    
-                    qlist.append($(emptyState));
-                }
-                
-            }
-
-        });
-    },500);
+    refreshRegiesteredQueryList();
 
     $.ajax("tornado/config").done(function(conf){
         console.log(conf);
@@ -217,37 +180,72 @@ function initialize() {
         
         if (ssetype == "output") {
 
-            var color = randomColor().slice(1).toUpperCase();
-            var iconUrl = createColoredMarker(color);
-            // console.log(iconUrl);
-            // draw on map
-            var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);
-            var marker1 = new google.maps.Marker({
-                  position: myLatlng1,
-                  map: gmap,
-                  icon: iconUrl,
-                  title:sse.text
-              });
-            var infowindow1 = new google.maps.InfoWindow({
-                  content: "<p>"+sse.text+"</p>"
-              });
-            google.maps.event.addListener(marker1,'click',function(){
-                infowindow1.open(gmap,marker1);                
-             });
+            var color = uiState.getRandomColor();
 
-            // add to side listing
-            var outputlisting = $("#outputlisting")
-            if (outputlisting.find("li.empty").length  > 0) {
-                // list is empty but contains an info bullet, so make it empty
-                outputlisting.empty();                
+            if (sse.outputColor) {
+                color = sse.outputColor;
             }
-            var iconElem = $("<img src='"+iconUrl+"' />");
-            var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
-            var textCol = $("<p class='col-md-8' style='overflow-x:scroll;'>"+sse.text+"</p>");
-            var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
-            var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+
+            // lookup query current state
+            var qi = uiState.catalog.queries.keys.indexOf(sse.name);
             
-            outputlisting.append( listitem );
+
+            if (qi !== -1){
+                var qo = uiState.catalog.queries.vals[qi];
+
+
+                var iconUrl = createColoredMarker(color);
+                // console.log(iconUrl);
+                // create map element
+                var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);
+                var marker1 = new google.maps.Marker({
+                      position: myLatlng1,
+                      icon: iconUrl,
+                      title:sse.text
+                  });
+                var infowindow1 = new google.maps.InfoWindow({
+                      content: "<p>"+sse.text+"</p>"
+                  });
+                google.maps.event.addListener(marker1,'click',function(){
+                    infowindow1.open(gmap,marker1);                
+                 });
+
+                // create list element
+
+                // hide empty message
+                var outputlisting = $("#outputlisting");
+
+                var iconElem = $("<img src='"+iconUrl+"' />");
+                var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
+                var textCol = $("<p class='col-md-8' style='overflow-x:scroll;'>"+sse.text+"</p>");
+                var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
+                var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+                // listitem.data("query", sse.name);
+
+                if (qo.checked === "check"){
+                    marker1.setMap(gmap);                    
+                }
+                else{
+                    listitem.toggleClass("hidden");
+                }
+                
+                outputlisting.append( listitem );
+
+                if (!qo.output){
+                    qo.output = [];
+                }
+                var outputEntry = {};
+                outputEntry.mapElement = marker1;
+                outputEntry.listElement = listitem;
+
+            
+                qo.output.push(outputEntry);
+
+                refreshOutputListing();
+
+            }
+
+
 
         }
     }
@@ -283,7 +281,7 @@ function initialize() {
         else {
             var qid = uiState.knnList.length;
             var _color = uiState.getRandomColor();
-            var _iconUrl = createColoredMarker(_color.slice(1).toUpperCase());
+            var _iconUrl = createColoredMarker(_color);
             uiState.knnList.push({show: true, name: "f" + qid, marker: e, color: _color, iconUrl: _iconUrl});
 
             e.addListener("position_changed", function () {
@@ -361,7 +359,161 @@ function buildErrorMessage(e) {
     return e.line !== undefined && e.column !== undefined
       ? "Line " + e.line + ", column " + e.column + ": " + e.message
       : e.message;
-  }
+}
+
+
+
+function refreshOutputListing(){
+    var outputlisting = $("#outputlisting");
+    var t = outputlisting.find("li.empty:not(.hidden)");
+    // console.log(t);
+    if (t.length  > 0) {
+        // list is empty but contains an info bullet, so make it empty
+        // outputlisting.empty();  
+        
+        t.addClass("hidden");
+        
+    }
+    if (outputlisting.find("li.list-group-item.hidden:not(.empty)").length == outputlisting.find("li.list-group-item:not(.empty)").length){
+        // show empty 
+        outputlisting.find("li.empty.hidden").removeClass("hidden");
+    }
+}
+
+
+
+function createQueryListEntry(qobj){
+    var cqobj = qobj;
+    if (typeof qobj === "number"){
+        cqobj = uiState.catalog.queries.vals[qobj] 
+    }
+
+    console.log(cqobj);
+    var djo = {};
+
+
+    if (cqobj.qname){
+        djo.name = cqobj.qname;    
+    }
+    else if (cqobj.name) {
+        djo.name = cqobj.name;
+    }
+    
+    // add tag
+    djo.tag = "-";
+
+    var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
+    removeIcon.click(function(){
+        $.ajax("tornado/queries",{
+            method: "DELETE",
+            data: $.toJSON(djo)
+        }).done(function(resp){
+            console.log(resp);
+            syslogAddStatus(resp);
+            var dqi = uiState.catalog.queries.keys.indexOf(djo.name);
+            var dqo = uiState.catalog.queries.vals[dqi];
+            for (var i = dqo.output.length - 1; i >= 0; i--) {
+                dqo.output[i].mapElement.setMap(null);
+                console.log(dqo.output[i].listElement);
+                dqo.output[i].listElement.remove();
+            };
+            uiState.catalog.queries.keys.splice(dqi,1);
+            uiState.catalog.queries.vals.splice(dqi,1);
+            refreshRegiesteredQueryList();
+            refreshOutputListing();
+        });
+    });
+    var qname = $('<p>'+djo.name+'</p>');
+
+    var displayIcon = $('<span class="glyphicon glyphicon-'+cqobj.checked+'" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
+    displayIcon.click(function(){
+        displayIcon.toggleClass("glyphicon-check glyphicon-unchecked"); 
+        //console.log(displayIcon.is(".glyphicon-check"));
+        if (displayIcon.is(".glyphicon-unchecked")){
+            // update state
+            cqobj.checked = "unchecked";
+            console.log("remove all output for "+djo.name+" from display");
+            // var qi = uiState.catalog.queries.keys.indexOf(djo.name);  
+            // var qo = uiState.catalog.queries.vals[qi];
+            for (var i = cqobj.output.length - 1; i >= 0; i--) {
+              cqobj.output[i].mapElement.setMap(null);
+              $(cqobj.output[i].listElement).toggleClass("hidden");
+            };         
+
+        }
+        else if (displayIcon.is(".glyphicon-check")){
+            cqobj.checked = "check";
+            for (var i = cqobj.output.length - 1; i >= 0; i--) {
+              cqobj.output[i].mapElement.setMap(gmap);             
+              $(cqobj.output[i].listElement).toggleClass("hidden"); 
+            };              
+        }        
+    });
+    return $('<li class="list-group-item qdata"></li>').append(removeIcon).append(displayIcon).append(qname);
+}
+
+function refreshRegiesteredQueryList(){
+    $.ajax("tornado/queries").done(function(data){
+            // console.log($("#regQueriesList li.empty").length);
+            // console.log($("#regQueriesList li").length);
+            //syslogAddStatus(data);
+            // console.log(data);
+            // console.log(uiState.catalog.queries.liststate);
+            var qlist = $("#regQueriesList")
+            var emptyState = '<li class="list-group-item empty">No registered continuous queries</li>';
+            if (data.length > 0) {
+
+                // cache data
+                // new queries registered
+                for (var i = data.length - 1; i >= 0; i--) {
+                    var qi = uiState.catalog.queries.keys.indexOf(data[i].name);
+                    if (qi === -1){
+                       // new query update client state
+                       qi = uiState.catalog.queries.keys.push(data[i].name) -1;    
+                       var nqo = data[i];
+                       nqo.checked = "check";
+                       nqo.output = [];
+                       console.log(nqo);
+                       uiState.catalog.queries.vals.push(nqo); 
+                    }                    
+                };
+                    //uiState.catalog.queries.liststate = data;
+                    //console.log("here?");            
+
+                    // check if qlist is currently empty (has the empty message)
+                    if (qlist.find("li.empty").length > 0) qlist.empty();    
+
+                    if (qlist.find("li").length != data.length) {
+                        qlist.empty();
+                        for (var i = 0; i < uiState.catalog.queries.vals.length; i++) {
+                             // console.log(data[i]);
+                             // console.log(data[i].outputColor);
+                            qlist.append(createQueryListEntry(i));
+                        };
+                    }            
+            }
+            else{
+                if (qlist.find("li.empty").length == 0) {
+                    qlist.empty();    
+                    qlist.append($(emptyState));
+                }
+                
+            }
+
+        });
+}
+
+
+function updateRegisteredQueries(qast, msg){
+    syslogAddStatus(msg);
+    // console.log(qast);
+    var qlist = $("#regQueriesList");
+    // check if qlist is currently empty (has the empty message)
+    // if (qlist.find("li.empty").length > 0) qlist.empty();    
+    // qlist.append(createQueryListEntry(qast));
+    // The following will require a trip to the server to fetch the query list and update local state, can we update locally only ??
+    refreshRegiesteredQueryList();            
+}
 
 
 // Doc load 
@@ -419,15 +571,26 @@ $(document).ready(function () {
         var ast = syncSQLparse(uiState.parser);
         var gmapView = createMBR(gmap);
         // console.log($.toJSON(gmapView));
+
+        // add current view
         ast.currentView = gmapView;
+
+        // add color 
+        ast.outputColor = uiState.getRandomColor();
+        console.log(ast.outputColor);
+
         //optimizeQueryPlan(ast.plan);
+
+        // post query submitted query to server
         $.ajax( "tornado/queries", {
             method: "POST",
             data: $.toJSON(ast),
             dataType: "json"
         }).done(function(data){
             //console.log(data);
-            syslogAddStatus(data);
+            // syslogAddStatus(data);
+            updateRegisteredQueries(ast,data);
+
         });
     });
 
@@ -696,6 +859,13 @@ function createMBR(rect) {
 
 function createColoredMarker(pinColor) {
     // var pinColor = "FE7569";
+    // handle pounsign
+    //var pinColor = uiState.getRandomColor();
+
+    if (pinColor[0] == '#'){
+        pinColor = pinColor.slice(1).toUpperCase();
+        //console.log(pinColor);
+    }
 
 
     var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + pinColor,

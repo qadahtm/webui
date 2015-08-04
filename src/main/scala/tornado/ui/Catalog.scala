@@ -57,8 +57,17 @@ object Catalog {
     }
   }
   
-  def getRegisteredCQueries: JsArray = {
-    JsArray(json_cqueries.keys.map { JsString(_) }.toVector)
+  def getRegisteredCQueries: JsArray = {    
+    JsArray(json_cqueries.map { q => {
+      val qname = q._1
+      val qjso = q._2
+      val color = getStringValue("outputColor", qjso)
+      JsObject("name" -> JsString(qname), "outputColor" -> JsString(color))
+    } }.toVector)
+  }
+  
+  def getStringValue(key:String, jso:JsObject) : String = {
+    jso.fields.get(key).get.asInstanceOf[JsString].value
   }
 
   def getRegisteredSQueries: JsArray = {

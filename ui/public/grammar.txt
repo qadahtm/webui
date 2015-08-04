@@ -174,7 +174,7 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 / obj:ident sps dot sps pname:predName2n sps op sps kval:numVal sps comma sps parg:ident  sps cp {return [obj,pname,kval,bindVar(pname,parg)];}
 / pname:(func2p) sps op sps obj:cident sps comma sps parg:aident sps cp 
 {return {argc:2,jcond:false,op:pname,lhs:obj,rhs:bindVar(pname,parg)};}
-/ pname:(func2p) sps op sps obj:cident sps comma sps parg:aident sps cp 
+/ pname:(func2p) sps op sps obj:cident sps comma sps parg:cident sps cp 
 {return {argc:2,jcond:true,op:pname,lhs:obj,rhs:parg};}
 / pname:(func2p) sps op sps obj:cident sps comma sps parg:strVal sps cp 
 {return {argc:2,jcond:false,op:pname,lhs:obj,rhs:parg[1]};}
@@ -182,7 +182,7 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 {return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
 
 
-aident = "@" ident / cident
+aident = "@" ident
 cident = sa:(ident ".")? ca:ident { if (sa != null) return {"sourceName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
 
 coper = "=" / ">" / "<" / ">=" / "<=" / "!="
@@ -212,9 +212,11 @@ isKey = "key"
 
 
 numVal = dig:[0-9]+ {return new Number(dig.join("")).valueOf();}
-strVal = "\"" str:ident "\"" / "'" str:ident "'" {return str;}
+strVal = "\"" str:strLitv "\"" / "'" str:strLitv+ "'" {return str;}
 
-
+strLitv = strl:strLit+ {return strl;}
+strLit = av:[a-zA-z_0-9]+ sp?
+{return av.join("");}
 ident = alpha:[a-zA-Z_]+dig:[0-9]* {return alpha.join("").concat(dig.join(""));}
 data_type = "JsNumber" / "JsString" / "JsBoolean" 
 

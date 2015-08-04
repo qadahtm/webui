@@ -176,6 +176,13 @@ object TornadoWebserver extends App with SimpleRoutingApp {
          
        }}
   
+  def publishToKafka(qname:String,jstr:String) = {
+    if (Helper.getConfig().getBoolean("kafka.enabled")) {
+        val rec = new ProducerRecord[String,String](Helper.getConfig().getString("kafka.producer.topic"),qname,jstr)
+        Catalog.KafkaProducerSend(rec)  
+      }
+  }
+  
   val tornado_queries = path("tornado" / "queries") {
       get {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
@@ -187,6 +194,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
           val jstr = ctx.request.entity.asString
           val jo = JsonParser(jstr)
 //          log.info("received request, entity = " + jo.prettyPrint)
+          log.info(jo.prettyPrint)
           val qname = jo.asJsObject.fields.get("name").get.asInstanceOf[JsString].value
           
             jo.asJsObject.fields.get("type") match {
@@ -203,11 +211,9 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                       // register query
                       Catalog.json_cqueries += (qname -> jo.asJsObject)
                       
-                      // publish to Kafka
-                      if (Helper.getConfig().getBoolean("kafka.enabled")) {
-                        val rec = new ProducerRecord[String,String](Helper.getConfig().getString("kafka.producer.topic"),qname,jstr)
-                        Catalog.KafkaProducerSend(rec)  
-                      }
+                      // publish to Kafka if needed
+                      
+                      publishToKafka(qname,jstr)
                       
                       ret = createStatusResponse("success","query registered : "+qname)
                     }
@@ -232,9 +238,12 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       }~
       delete {
         ctx => {
-          val jo = JsonParser(ctx.request.entity.asString)
+          val jstr = ctx.request.entity.asString
+          val jo = JsonParser(jstr)
+          log.info(jo.prettyPrint)
           var resp = ""
-          jo.asJsObject.fields.get("name") match {
+          val qname = jo.asJsObject.fields.get("name") 
+          qname match {
             case Some(x) => {
               val key = x.asInstanceOf[JsString].value
               
@@ -243,14 +252,17 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                   resp = createStatusResponse("success", "successfully removed query : "+key)
                 }
                 case None => {
-                  resp = createStatusResponse("error", "cannot removed nonexistent query : "+key)
+                  resp = createStatusResponse("error", "cannot remove nonexistent query : "+key)
                 }
-              }              
+              }
+              // publish to kafka if needed
+              publishToKafka(key, jstr)
             }
             case None => {
               resp = createStatusResponse("error", "malformed/invalid delete request ")
             }
           }
+          
           ctx.complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, resp)))
         }
       }

@@ -117,7 +117,96 @@ class KafkaTopicStreamer(peer: ActorRef, topic: String, formatSSE: String => JsV
 
     }
 
-    case Tcp.Abort => {
+    case Tcp.Abort | Tcp.Aborted => {
+      log.info("Peer aborted, ending respnse streaming ")
+      consumer ! PoisonPill
+      self ! PoisonPill
+    }
+
+    case KafkaStringMessage(kafkaMsg) => {
+      kafkaQueue.enqueue(kafkaMsg)
+      //        log.info("Receieved kafka message: " + kafkaMsg)
+
+      if (waiting && kafkaQueue.size == 1) {
+        self ! SendReady
+      }
+    }
+
+    case x: Any => {
+      log.info("Receieved something unexpected: " + x.getClass.toString)
+    }
+  }
+
+}
+
+class KafkaTopicStreamerWithFiltering(peer: ActorRef, topic: String, formatSSE: String => JsValue, EventStreamType: MediaType) extends Actor with ActorLogging {
+
+  val id = Catalog.kafkaConsumerCount.incrementAndGet()
+  val max = 200
+
+  val kafkaQueue = scala.collection.mutable.Queue[String]()
+
+  val conf = ConfigFactory.parseFile(new File("application.conf"))
+
+  val zk = conf.getString("kafka.zk")
+  val cgid = "cgid-web-" + id
+
+  context.watch(peer)
+
+  val consumer = utils.KafkaConsumerHelper.startKafkaConsumer(zk, cgid, topic, this.context.system, self)
+
+  val streamStart = JsObject("type" -> JsString("stream-start"))
+
+  val responseStart = HttpResponse(entity = HttpEntity(EventStreamType.withCharset(HttpCharsets.`UTF-8`), Helper.createSSE("ping", streamStart.toString)))
+
+  peer ! ChunkedResponseStart(responseStart).withAck(SendReady)
+
+  implicit val ec = this.context.system.dispatcher
+
+  var waiting = false
+
+  def receive = {
+    case Ready => {
+      this.context.system.scheduler.scheduleOnce(500 milliseconds, self, SendReady)
+    }
+    case SendReady => {
+
+      if (kafkaQueue.size == 0) waiting = true
+
+      while (kafkaQueue.size > 0) {
+        val outputTuple = kafkaQueue.dequeue
+        try{
+          val jo = JsonParser(outputTuple).asJsObject
+          val tqname = jo.fields.get("name").asInstanceOf[JsString].value
+          Catalog.json_cqueries.get(tqname) match {
+            case Some(qjo) =>{
+              val resp = JsObject("type" -> JsString(topic), "data" -> formatSSE(outputTuple))        
+              val newChunk = MessageChunk(Helper.createSSE("ping", resp.toString()))
+              peer ! newChunk.withAck(SendReady)   
+            }
+            case None => {
+              log.info("received ouput for de-registered query ("+tqname+"), ignoring it")
+            }
+          }            
+        }
+        catch {
+          case e:Throwable => {
+            log.info(e.getMessage)
+          }
+        }
+        
+      }
+
+    }
+
+    case Http.PeerClosed => {
+      log.info("Peer terminated, ending respnse streaming ")
+      consumer ! PoisonPill
+      self ! PoisonPill
+
+    }
+
+    case Tcp.Abort | Tcp.Aborted => {
       log.info("Peer aborted, ending respnse streaming ")
       consumer ! PoisonPill
       self ! PoisonPill
@@ -164,6 +253,7 @@ class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) ex
       if (qn > 0) {
         val qname = Catalog.json_cqueries.keys.toList(scala.util.Random.nextInt(qn))
         val cv = Catalog.json_cqueries.get(qname).get.fields.get("currentView").get
+        val qcolor = Catalog.json_cqueries.get(qname).get.fields.get("outputColor").get
         val bounds = cv.asJsObject.getFields("north", "west", "south", "east").map { _.asInstanceOf[JsNumber].value }
         val rlng = bounds(1).toDouble + (scala.math.abs(bounds(3).toDouble - bounds(1).toDouble) * scala.util.Random.nextDouble())
         val rlat = bounds(2).toDouble + (scala.math.abs(bounds(0).toDouble - bounds(2).toDouble) * scala.util.Random.nextDouble())
@@ -176,8 +266,9 @@ class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) ex
           data =  scala.io.Source.fromFile(sampleTweetsFile).getLines()
         }
         
-        val resp = JsObject("qname" -> JsString(qname),
+        val resp = JsObject("name" -> JsString(qname),
           "type" -> JsString("output"),
+          "outputColor" -> qcolor,
           "point" -> JsObject("lat" -> JsNumber(rlat), "lng" -> JsNumber(rlng)),
           "text" -> JsString(txt))
 
@@ -195,6 +286,11 @@ class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) ex
       log.info("Peer terminated, ending respnse streaming ")
       self ! PoisonPill
     }
+    
+//    case Tcp.Aborted => {
+//      log.info("Responder Peer has aborted, ending streamer instance ")
+//      self ! PoisonPill
+//    }
 
     case x: Any => {
       log.info("Receieved something unexpected: " + x.getClass.toString)
