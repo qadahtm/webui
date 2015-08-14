@@ -171,6 +171,7 @@ function initialize() {
         var sse = $.parseJSON(e.data);
         var ssetype = sse.type;
         if (conf.kafka.enabled && (typeof sse.data) === "string"){
+            console.log(sse);
             console.log(sse.data);    
             sse = eval("(" + sse.data + ")");
         }
@@ -187,10 +188,19 @@ function initialize() {
             }
 
             // lookup query current state
-            var qi = uiState.catalog.queries.keys.indexOf(sse.name);
-            
+            var qi;
 
-            if (qi !== -1){
+            if (sse.name === undefined){
+                qi = uiState.catalog.queries.keys.indexOf(sse.qname);
+            }
+            else {
+                qi = uiState.catalog.queries.keys.indexOf(sse.name);
+            }
+
+
+            console.log(qi);
+
+            if (qi != -1){
                 var qo = uiState.catalog.queries.vals[qi];
 
 
