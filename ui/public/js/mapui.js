@@ -34,12 +34,16 @@ var uiState = {
     knnList: [],
     rangeList: [],
     getRandomColor: function () {
-        return randomColor({luminosity: 'light'});
+        return randomColor({luminosity: 'dark'});
     },    
+    getRandomColorLight: function () {
+        return randomColor({luminosity: 'light'});
+    },  
     resolveRangePredVar: function (v) {
         var i = 0;
         while (i < uiState.rangeList.length) {
             if (v == uiState.rangeList[i].name) {
+                console.log(uiState.rangeList[i].name);
                 return createMBR(uiState.rangeList[i].rect);
             }
             i++;
@@ -48,6 +52,7 @@ var uiState = {
     },
     resolveKNNPredVar: function (v) {
         var i = 0;
+        console.log(v);
         while (i < uiState.knnList.length) {
             if (v == uiState.knnList[i].name) {
                 // console.log(uiState.knnList[i].marker.getPosition());
@@ -198,9 +203,9 @@ function initialize() {
             }
 
 
-            console.log(qi);
+            // console.log(qi);
 
-            if (qi != -1){
+            if (qi !== -1){
                 var qo = uiState.catalog.queries.vals[qi];
 
 
@@ -280,22 +285,29 @@ function initialize() {
     var map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
     gmap = map;
-    pservice = new google.maps.places.PlacesService(gmap);
+    //pservice = new google.maps.places.PlacesService(gmap);
     drawingOptions.rectangleOptions = beforeRectOptions;
 
     drawingManager = new google.maps.drawing.DrawingManager(drawingOptions);
-    drawingManager.addListener("markercomplete", function (e) {
+    drawingManager.addListener("markercomplete", function (m) {
         if ((uiState.knnList.length) == drawingContext.rectangleMaxCount) { //TODO change limit
-            e.setMap(null);
+            m.setMap(null);
         }
         else {
             var qid = uiState.knnList.length;
-            var _color = uiState.getRandomColor();
+            var _color = uiState.getRandomColorLight();
             var _iconUrl = createColoredMarker(_color);
-            uiState.knnList.push({show: true, name: "f" + qid, marker: e, color: _color, iconUrl: _iconUrl});
+            uiState.knnList.push({show: true, name: "f" + qid, marker: m, color: _color, iconUrl: _iconUrl});
 
-            e.addListener("position_changed", function () {
-                updateKNNPred(qid, this);
+            var nopt = {
+                      icon: _iconUrl
+                  };
+
+            //console.log(m);
+            m.setOptions(nopt);
+
+            m.addListener("position_changed", function () {
+                updateKNNPred(qid, this, {});
             });
             updateKNNList();
         }
@@ -304,13 +316,28 @@ function initialize() {
         // console.log("a rectangle is completed");
         // console.log(e.getBounds());
         // console.log("current count = "+drawingContext.rectangles.length);
+        
         if ((uiState.rangeList.length) == drawingContext.rectangleMaxCount) {
             // console.log("max count has reached which is "+drawingContext.rectangleMaxCount);
             e.setMap(null);
         }
         else {
             var qid = uiState.rangeList.length;
-            uiState.rangeList.push({show: true, name: "r" + qid, rect: e});
+
+            var _color = uiState.getRandomColorLight();
+
+            var rnopt = {
+               clickable: false,
+               draggable: false,
+               editable: false,
+                fillColor: _color,
+                fillOpacity: 0.5,
+                strokeWeight: 1
+            };
+
+            e.setOptions(rnopt);
+
+            uiState.rangeList.push({show: true, name: "r" + qid, rect: e, color: _color});
 
             e.addListener("bounds_changed", function () {
                 updateMBR(qid, this);
@@ -391,6 +418,38 @@ function refreshOutputListing(){
 }
 
 
+function createPredicateListEntry(pobj) {
+    var cqobj = pobj;
+    
+    var colorIcon = $('<span class="glyphicon glyphicon-stop" style="float:left;margin-right:0.6em;color:'+cqobj.color+'"></span>');
+    var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:black"></span>');
+    // removeIcon.click(function(){
+    //     $.ajax("tornado/queries",{
+    //         method: "DELETE",
+    //         data: $.toJSON(djo)
+    //     }).done(function(resp){
+    //         // console.log(resp);
+    //         syslogAddStatus(resp);
+    //         var dqi = uiState.catalog.queries.keys.indexOf(djo.name);
+    //         var dqo = uiState.catalog.queries.vals[dqi];
+    //         for (var i = dqo.output.length - 1; i >= 0; i--) {
+    //             dqo.output[i].mapElement.setMap(null);
+    //             // console.log(dqo.output[i].listElement);
+    //             dqo.output[i].listElement.remove();
+    //         };
+    //         uiState.catalog.queries.keys.splice(dqi,1);
+    //         uiState.catalog.queries.vals.splice(dqi,1);
+    //         refreshRegiesteredQueryList();
+    //         refreshOutputListing();
+    //     });
+    // });
+
+    var pname = $('<p>'+pobj.name+'</p>');
+
+    return $('<li class="list-group-item"></li>').append(colorIcon).append(removeIcon).append(pname);
+}
+
+
 
 function createQueryListEntry(qobj){
     var cqobj = qobj;
@@ -398,7 +457,7 @@ function createQueryListEntry(qobj){
         cqobj = uiState.catalog.queries.vals[qobj] 
     }
 
-    console.log(cqobj);
+    // console.log(cqobj);
     var djo = {};
 
 
@@ -411,20 +470,20 @@ function createQueryListEntry(qobj){
     
     // add tag
     djo.tag = "-";
-
-    var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
+    var colorIcon = $('<span class="glyphicon glyphicon-stop" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
+    var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:black"></span>');
     removeIcon.click(function(){
         $.ajax("tornado/queries",{
             method: "DELETE",
             data: $.toJSON(djo)
         }).done(function(resp){
-            console.log(resp);
+            // console.log(resp);
             syslogAddStatus(resp);
             var dqi = uiState.catalog.queries.keys.indexOf(djo.name);
             var dqo = uiState.catalog.queries.vals[dqi];
             for (var i = dqo.output.length - 1; i >= 0; i--) {
                 dqo.output[i].mapElement.setMap(null);
-                console.log(dqo.output[i].listElement);
+                // console.log(dqo.output[i].listElement);
                 dqo.output[i].listElement.remove();
             };
             uiState.catalog.queries.keys.splice(dqi,1);
@@ -435,14 +494,14 @@ function createQueryListEntry(qobj){
     });
     var qname = $('<p>'+djo.name+'</p>');
 
-    var displayIcon = $('<span class="glyphicon glyphicon-'+cqobj.checked+'" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
+    var displayIcon = $('<span class="glyphicon glyphicon-'+cqobj.checked+'" style="float:left;margin-right:0.6em;color:black"></span>');
     displayIcon.click(function(){
         displayIcon.toggleClass("glyphicon-check glyphicon-unchecked"); 
         //console.log(displayIcon.is(".glyphicon-check"));
         if (displayIcon.is(".glyphicon-unchecked")){
             // update state
             cqobj.checked = "unchecked";
-            console.log("remove all output for "+djo.name+" from display");
+            // console.log("remove all output for "+djo.name+" from display");
             // var qi = uiState.catalog.queries.keys.indexOf(djo.name);  
             // var qo = uiState.catalog.queries.vals[qi];
             for (var i = cqobj.output.length - 1; i >= 0; i--) {
@@ -459,7 +518,7 @@ function createQueryListEntry(qobj){
             };              
         }        
     });
-    return $('<li class="list-group-item qdata"></li>').append(removeIcon).append(displayIcon).append(qname);
+    return $('<li class="list-group-item qdata"></li>').append(colorIcon).append(removeIcon).append(displayIcon).append(qname);
 }
 
 function refreshRegiesteredQueryList(){
@@ -828,16 +887,19 @@ function updateRangeList() {
     $("#rangeList").empty();
     for (var i = 0; i < uiState.rangeList.length; i++) {
         var t = uiState.rangeList[i];
-        addRangePredEntry("rangeList", t.name, t.name);
+        //console.log(t);
+        var pe = createPredicateListEntry(t);
+        $("#rangeList").append(pe);
+        // addRangePredEntry("rangeList", t.name, t.name);
 
     }
     ;
 }
 
 
-function updateKNNPred(qid, marker) {
+function updateKNNPred(qid, marker,opt) {
     // console.log(marker);
-    marker.setOptions({});
+    marker.setOptions(opt);
     uiState.knnList[qid].marker = marker;
 }
 
@@ -848,7 +910,10 @@ function updateKNNList() {
     $("#knnList").empty();
     for (var i = 0; i < uiState.knnList.length; i++) {
         var p = uiState.knnList[i];
-        addKNNPredEntry("knnList", p);
+        // console.log(p);
+        var pe = createPredicateListEntry(p);
+        $("#knnList").append(pe);
+        // addKNNPredEntry("knnList", p);
     }
     ;
 }

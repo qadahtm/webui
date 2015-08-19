@@ -18,23 +18,31 @@ where s1.rid = "r1" and s2.roomTemp = 3;
 */
 
 {
+// Need to comment in production
 //var uiState = {
 //resolveRangePredVar: function(){return null;},
 //resolveKNNPredVar:function(){return null;}
 //};
 
-   function getState(){
-      return uiState;
-   }
+   
 
    function bindVar(t, v){
-      //console.log(uiState);
-     if (t == "kNN"){
-      console.log(uiState.resolveKNNPredVar(v));
+//      console.log(uiState);
+      console.log(t);
+      console.log(v);
+
+
+     if (t == "KNN"){
+      //console.log(uiState.resolveKNNPredVar(v));
+      if (uiState == undefined) return null;
+
       return uiState.resolveKNNPredVar(v);
      } 
      else if (t == "inRange"){        
         return uiState.resolveRangePredVar(v);
+     }
+     else if (t == "INSIDE"){      
+      return uiState.resolveRangePredVar(v);
      }
      else return null;
    }   
@@ -180,9 +188,16 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 {return {argc:2,jcond:false,op:pname,lhs:obj,rhs:parg[1]};}
 / pname:(func3p) sps op sps obj1:cident sps comma sps obj2:cident sps comma sps parg:numVal sps cp 
 {return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
+/ pname:(func3p) sps op sps obj1:cident sps comma sps obj2:aident sps comma sps parg:numVal sps cp 
+{ 
+//console.log(obj2);
+if (pname == "KNN") 
+return {argc:3,jcond:false,op:pname,kval:parg,focal:bindVar(pname,obj2)};
+else 
+return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
 
 
-aident = "@" ident
+aident = "@" n:ident {return n;}
 cident = sa:(ident ".")? ca:ident { if (sa != null) return {"sourceName":sa[0],"attributeName":ca}; else return {"attributeName":ca};}
 
 coper = "=" / ">" / "<" / ">=" / "<=" / "!="
@@ -232,7 +247,7 @@ func1p = "1p"
 
 func2p = "INSIDE" / "CONTAINS" / "OVERLAPS"
 
-func3p = "WITHIN_DISTANCE"
+func3p = "WITHIN_DISTANCE" / "KNN"
 
 and = "and"/ "AND"
 or = "or" / "OR"

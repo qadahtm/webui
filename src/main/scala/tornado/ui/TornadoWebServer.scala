@@ -421,6 +421,9 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                 //                WebDemo2.updatePartitions(solution.toString());
                 //                
                 //            }
+                
+                // process 
+                
                 WebDemo2.dynamic.processNewQuery(aqwaqueries(i));
 
                 val ps = scala.collection.mutable.ArrayBuffer[Partition]()
@@ -435,7 +438,8 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                 //                       ,"color" -> JsString("#FF0000")
                 //                      )
                 //            }}
-
+                
+                // create list of rectangles
                 val res = ps.map { p =>
                   {
                     JsObject("north" -> JsNumber(ymap.get(p.getTop()).get), "south" -> JsNumber(ymap.get(p.getBottom()).get), "west" -> JsNumber(xmap.get(p.getLeft()).get), "east" -> JsNumber(xmap.get(p.getRight()).get), "color" -> JsString("#000000"))
@@ -448,7 +452,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                 if (i == aqwaqueries.size()) i = 0;
                 p = aqwaqueries(i)
 
-                val resp = JsArray(res.toVector)
+                val resp = JsArray(res.toVector) 
                 //            println("sending out "+res.size+" rects")
                 //            println(resp.toString())
                 val hres = HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, resp.toString()))

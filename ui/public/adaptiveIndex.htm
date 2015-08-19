@@ -106,7 +106,7 @@ var grid = [];
       draggable:true,
       editable:true,
       fillColor: beforeColor, 
-      fillOpacity: 0.5,
+      fillOpacity: 0,
       strokeWeight: 5
     };
 
@@ -250,12 +250,13 @@ $("#title").click(function(){
     //    drawMBR(gmbr,"#FF0000");
 
         var urate = getParameterByName("urate");
-        console.log(urate);
+        //console.log(urate);
         
 
         runningvis.timer = setInterval(function(){
             $.getJSON( "adaptive", gmbr,function( data ) {
     //        console.log($.toJSON(gmbr));
+             // console.log($.toJSON(data));
     //        console.log(data[data.length-1]);
             if (data.length > 0){
                 for (i in runningvis.uilines){
@@ -645,7 +646,7 @@ function drawMBR(mbr, rcolor){
         strokeOpacity: 0.8,
         strokeWeight: 2,
 //        fillColor: rcolor,
-//        fillOpacity: 0.15,
+       fillOpacity: 0,
         map: gmap,
         bounds: cellbounds
       });

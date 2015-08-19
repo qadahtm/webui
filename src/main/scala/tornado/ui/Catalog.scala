@@ -36,8 +36,10 @@ import java.util.concurrent.atomic.AtomicLong
 case class OutputEntry(val ts: Long, val entry: JsObject)
 
 object Catalog {
-  val json_cqueries = mutable.Map[String, JsObject]()
-  val json_squeries = mutable.Map[String, JsObject]()
+  
+  // Synchronized access -- Performance hit 
+  val json_cqueries = new mutable.LinkedHashMap[String, JsObject]() with scala.collection.mutable.SynchronizedMap[String, JsObject]
+  val json_squeries = new mutable.LinkedHashMap[String, JsObject]() with scala.collection.mutable.SynchronizedMap[String, JsObject]
 
   val datasources = mutable.Map[String, DataSource]()
 
