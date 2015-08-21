@@ -93,7 +93,10 @@ class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with Ac
       val f = Future {
         stream.iterator.foreach(x => {
           //          log.info("KafkaMessage " + threadNum + " : " + x.message)
-          target ! (new KafkaStringMessage(x.message))
+          
+//          localSubs.map { x ! (new KafkaStringMessage(x.message)) }
+          
+          
           // TODO: Need to commit offsets, validate that this works
           consumer.commitOffsets()
         })
