@@ -663,16 +663,6 @@ $(document).ready(function () {
         });
     });
 
-    $("#compileSQL").click(function () {
-        var ast = syncSQLparse(uiState.parser);
-
-        // console.log(ast);
-        $("#dialog-vis").toggleClass("hidden");
-
-
-    });
-    /**     **/
-
     // Intialize google maps
 //                google.maps.event.addDomListener(window, 'load', initialize);
     initialize()

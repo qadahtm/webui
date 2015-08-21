@@ -183,6 +183,21 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       }
   }
   
+  def publishToKafkaQueries(qname:String,jstr:String) = {
+    publishToKafkaTopic(qname, jstr, Helper.getConfig().getString("kafka.topics.queries"))
+  }
+  
+  def publishToKafkaHotspots(k:String,v:String) = {
+    publishToKafkaTopic(k, v, Helper.getConfig().getString("kafka.topics.hotspots"))
+  }
+  
+  def publishToKafkaTopic(k:String,v:String, topic : String) = {
+    if (Helper.getConfig().getBoolean("kafka.enabled")) {
+        val rec = new ProducerRecord[String,String](topic,k,v)
+        Catalog.KafkaProducerSend(rec)  
+      }
+  }
+  
   val tornado_queries = path("tornado" / "queries") {
       get {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
@@ -213,7 +228,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                       
                       // publish to Kafka if needed
                       
-                      publishToKafka(qname,jstr)
+                      publishToKafkaQueries(qname,jstr)
                       
                       ret = createStatusResponse("success","query registered : "+qname)
                     }
@@ -256,7 +271,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
                 }
               }
               // publish to kafka if needed
-              publishToKafka(key, jstr)
+              publishToKafkaQueries(key, jstr)
             }
             case None => {
               resp = createStatusResponse("error", "malformed/invalid delete request ")
@@ -304,6 +319,12 @@ object TornadoWebserver extends App with SimpleRoutingApp {
   var csouth: String = ""
   var ceast: String = ""
   var cwest: String = ""
+  
+  // partitioning data for adaptive index mockup
+  val utestdata = Helper.getConfig().getString("data.adaptiveIndexMock")
+  // e.g. "data/PartitionsJSON.txt" 
+  var pupdates = Source.fromFile(utestdata).getLines();
+    
 
   startServer(interface = host, port = port) {
     getFromDirectory("ui/public") ~
@@ -320,13 +341,6 @@ object TornadoWebserver extends App with SimpleRoutingApp {
             }
           }
         }
-      } ~
-      path("kafka/twitter-stream") {
-        ctx =>
-          {
-            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "inputTweets", (Helper.formatSSETweets _), EventStreamType)
-            val streamer = system.actorOf(aprops)
-          }
       } ~
       path("twitter-output-stream") {
         ctx =>
@@ -357,7 +371,7 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       path("kafka" / "query-stream") {
         ctx =>
           {
-            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "queries", (Helper.selfString _), EventStreamType)
+            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, Helper.getConfig().getString("kafka.topics.queries"), (Helper.selfString _), EventStreamType)
             val streamer = system.actorOf(aprops)
           }
       } ~
@@ -372,10 +386,38 @@ object TornadoWebserver extends App with SimpleRoutingApp {
         ctx =>
           {
             log.info("Kafka output stream")
-            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, "output", (Helper.selfString _), EventStreamType)
+            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, Helper.getConfig().getString("kafka.topics.output"), (Helper.selfString _), EventStreamType)
             val streamer = system.actorOf(aprops)
 
           }
+      } ~
+      path("adaptiveIndex") {
+        get {
+            ctx =>
+              {
+                
+                if (!pupdates.hasNext) {
+                  log.info("repeat update cycle")
+                  pupdates = Source.fromFile(utestdata).getLines()
+                }
+                
+                val hres = HttpResponse(entity = HttpEntity(MediaTypes.`application/json`, pupdates.next()))
+                ctx.complete(hres)          
+              }
+         }
+      } ~
+      path("hotspot") {
+        post {
+          ctx =>
+          {
+            val jstr = ctx.request.entity.asString
+            log.info("got: "+jstr)
+            
+            publishToKafkaHotspots("adaptive", jstr)
+            
+            ctx.complete("got hotspot info")     
+          }
+        }        
       } ~
       path("adaptive") {
         parameters('north, 'west, 'south, 'east) { (n, w, s, e) =>

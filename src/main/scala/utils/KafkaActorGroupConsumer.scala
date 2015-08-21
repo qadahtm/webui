@@ -13,6 +13,7 @@ import akka.actor.Props
 import kafka.serializer.StringDecoder
 import akka.actor.ActorRef
 import kafka.javaapi.consumer.ConsumerConnector
+import scala.collection.mutable.ArrayBuffer
 
 object KafkaActorGroupConsumer extends App {
 
@@ -68,6 +69,41 @@ object KafkaConsumerHelper {
     (new ConsumerConfig(props))
   }
 
+}
+
+case class SubscribeStreamer(ar:ActorRef)
+case class UnsubscribeStreamer(ar:ActorRef)
+case class GetLastTuple()
+
+class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with ActorLogging {
+  implicit val ec = this.context.system.dispatcher
+  val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
+    val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
+    val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
+
+    val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
+    val streams = consumerMap.get(topic)
+  val stream = streams.get(0)
+  
+  val localSubs = ArrayBuffer[ActorRef]()
+  
+  
+  def receive = {
+    case "checkMsgs" => {
+      val f = Future {
+        stream.iterator.foreach(x => {
+          //          log.info("KafkaMessage " + threadNum + " : " + x.message)
+          target ! (new KafkaStringMessage(x.message))
+          // TODO: Need to commit offsets, validate that this works
+          consumer.commitOffsets()
+        })
+        
+      }
+    }
+    
+    
+    case _ => log.info("got a message")
+  }
 }
 
 case class KafkaStringMessage(val x: String) extends Serializable

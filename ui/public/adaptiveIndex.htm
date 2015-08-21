@@ -97,7 +97,7 @@ var grid = [];
 
     var drawingContext = {
       rectangles:[],
-      rectangleMaxCount:3
+      rectangleMaxCount:1
     };
     var drawingManager = null;
 
@@ -106,7 +106,7 @@ var grid = [];
       draggable:true,
       editable:true,
       fillColor: beforeColor, 
-      fillOpacity: 0,
+      fillOpacity: 0.5,
       strokeWeight: 5
     };
 
@@ -126,7 +126,7 @@ var grid = [];
         drawingModes: [
           // google.maps.drawing.OverlayType.CIRCLE,
           // google.maps.drawing.OverlayType.POLYGON,
-          google.maps.drawing.OverlayType.MARKER,
+          // google.maps.drawing.OverlayType.MARKER,
           google.maps.drawing.OverlayType.RECTANGLE
         ]
       },
@@ -150,12 +150,44 @@ var es; // event stream handle
         		// berlin
         		// 52.520190250694526&west=13.405380249023438&south=52.51914570999911&east=13.407440185546875 
             // makkah : 22.473878, 40.121263
-          center: new google.maps.LatLng(39.730255, -98.018183),
-          zoom: 5
+          // center: new google.maps.LatLng(39.730255, -98.018183),
+          center: new google.maps.LatLng(0,0),
+          panControl:false,
+          zoomControl:false,
+          mapTypeControl:false,
+          streetViewControl:false,
+          minZoom:2,
+          // maxZoom:2,
+          // draggable: false,
+          zoom: 2
         };
         var map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
         gmap = map;
+
+
+
+      //   var allowedBounds = new google.maps.LatLngBounds(
+      //    new google.maps.LatLng(70.33956792419954, 178.01171875), 
+      //    new google.maps.LatLng(83.86483689701898, -88.033203125)
+      // );
+      // var lastValidCenter = map.getCenter();
+
+      // google.maps.event.addListener(map, 'center_changed', function() {
+
+      //   if (gmap.getZoom() == 2){
+      //     gmap.setCenter(new google.maps.LatLng(0,0));
+      //   }
+
+      //     // if (allowedBounds.contains(map.getCenter())) {
+      //     //     // still within valid bounds, so save the last valid position
+      //     //     lastValidCenter = map.getCenter();
+      //     //     return; 
+      //     // }
+
+      //     // not valid anymore => return to last valid position
+      //     // map.panTo(lastValidCenter);
+      // });
 
         drawingOptions.rectangleOptions = beforeRectOptions;
 
@@ -202,7 +234,7 @@ var es; // event stream handle
 
       });
 
-      drawingManager.setMap(map);
+      // drawingManager.setMap(map);
 
 
 
@@ -254,15 +286,20 @@ $("#title").click(function(){
         
 
         runningvis.timer = setInterval(function(){
-            $.getJSON( "adaptive", gmbr,function( data ) {
+          $.getJSON( "adaptiveIndex", gmbr,function( data ) {
+            // $.getJSON( "adaptive", gmbr,function( data ) { // AQWA old demo data
     //        console.log($.toJSON(gmbr));
              // console.log($.toJSON(data));
     //        console.log(data[data.length-1]);
-            if (data.length > 0){
-                for (i in runningvis.uilines){
-                    runningvis.uilines[i].setMap(null);
+            // if (data.length > 0){
+                // for (i in runningvis.uilines){
+                //     runningvis.uilines[i].setMap(null);
+                // }
+                while (runningvis.uilines.length > 0){
+                  runningvis.uilines.pop().setMap(null);
                 }
-            }        
+
+            // }        
             //gmap.fitBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
             for (i in data){
              runningvis.uilines.push(drawMBR(data[i],data[i].color));          
@@ -275,240 +312,82 @@ $("#title").click(function(){
     
 });
 // initialize 
-grid = [];
+// grid = [];
 
-for (var i = 0; i < hc ; i++){
-  grid.push([]);
-  for (var j = 0; j < vc; j++) {
-    grid[i].push({});
-  };
+// for (var i = 0; i < hc ; i++){
+//   grid.push([]);
+//   for (var j = 0; j < vc; j++) {
+//     grid[i].push({});
+//   };
 
-} 
-console.log($.toJSON(grid));
-
-
-  nodes = new vis.DataSet();
-  edges = new vis.DataSet();
-  
-  // create a network
-  var container = document.getElementById('visholder');
-  var data = {
-    nodes: nodes,
-    edges: edges
-  };
-  var options = {
-    hierarchicalLayout: true,
-    shape:"database",
-    smoothCurves:false,
-    edges: {
-    style: 'arrow'
-  }
-  };
-  var network = undefined;
+// } 
 
 
+// console.log($.toJSON(grid));
 
-
-        /** Parser Code **/
-
-//        var parser = PEG.buildParser($("#SyncSQLGrammar").text().trim(), uiState);
-        function syncSQLparse(){
-                try{
-                    var pres = parser.parse($("#textData").val());
-                    // console.log(pres);
-                    // $('#prettyPrint').text(jsDump.parse(pres));
-                    
-                    var plan = pres.plan;
-                    var i = 0;
-                    var rootId = plan.type+""+(++i);
-                    // nodes.add([{id: rootId, label: plan.type+" : "+plan.attributes.toString()}]);
-                    var lv = getLevels(plan);
-                    console.log("levels = "+lv);
-                    addNodeQPlan(plan,rootId,i, lv);
-
-
-                    if (network != undefined)
-                      network.destroy();
-
-                    if (queryvis)
-                     network = new vis.Network(container, data, options);
-
-
-                    return pres;
-                } catch (err){
-                    //$('#prettyPrint').text(jsDump.parse(err));
-                    console.log($.toJSON(err));
-                    return null;
-                }
-            }
       
-      $("#buttonPanel span").click(function(event) {
-        $("#textData").val($(this).attr('data'));
-      });
-      
-      $("#compileSQL").click(function() {
-        var ast = syncSQLparse();
-        // console.log(ast);
-        $( "#dialog-vis" ).toggleClass("hidden");
-        // $( "#dialog-ast" ).dialog({
-        //   // resizable:false,
-        //   height:'auto',
-        //   width:'auto',
-        //   modal: true,
-        //   // open: function( event, ui ) {
-        //   //   $("#tabs").tabs();
-        //   // },
-        //   // buttons: {
-        //   //   "Delete all items": function() {
-        //   //     $( this ).dialog( "close" );
-        //   //   },
-        //   //   Cancel: function() {
-        //   //     $( this ).dialog( "close" );
-        //   //   }
-        //   // }
-        // });
-
-
-      });
-       /**     **/
-
         // Intialize google maps
     	  // google.maps.event.addDomListener(window, 'load', initialize);
 
 var gmapbounds;
-$('#showAdaptive').click(function () {
-  var ri = Math.floor((Math.random() * (hc)));
-  var rj = Math.floor((Math.random() * (vc)));
-  var ro = Math.floor((Math.random() * 2));
-  var rinc = Math.floor((Math.random() * 2));
-  var factor = Math.floor((Math.random() * 6)+2);
-  console.log("chosen random i = "+ri+" , j = "+rj+" o = "+ro);
-  console.log(createMBR(grid[ri][rj]));
-  var cmbr = createMBR(grid[ri][rj]);
+// $('#showAdaptive').click(function () {
+//   var ri = Math.floor((Math.random() * (hc)));
+//   var rj = Math.floor((Math.random() * (vc)));
+//   var ro = Math.floor((Math.random() * 2));
+//   var rinc = Math.floor((Math.random() * 2));
+//   var factor = Math.floor((Math.random() * 6)+2);
+//   console.log("chosen random i = "+ri+" , j = "+rj+" o = "+ro);
+//   console.log(createMBR(grid[ri][rj]));
+//   var cmbr = createMBR(grid[ri][rj]);
 
-  var rdelta = (Math.random() * (cmbr.north-cmbr.south))/factor;
-  if (ri == 0){
-    if (rj == hc-1){
+//   var rdelta = (Math.random() * (cmbr.north-cmbr.south))/factor;
+//   if (ri == 0){
+//     if (rj == hc-1){
 
-    }
-    else{
-      grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south-rdelta,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
-      grid[ri][rj].setMap(gmap);
+//     }
+//     else{
+//       grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south-rdelta,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
+//       grid[ri][rj].setMap(gmap);
 
-      var cmbr2 = createMBR(grid[ri+1][rj]);
-      grid[ri+1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south,cmbr.west), new google.maps.LatLng(cmbr2.north-rdelta,cmbr.east)));
-      grid[ri+1][rj].setMap(gmap);
-    }
-  }
-  else if (ri == vc-1){
-    if (rj == hc-1){
+//       var cmbr2 = createMBR(grid[ri+1][rj]);
+//       grid[ri+1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south,cmbr.west), new google.maps.LatLng(cmbr2.north-rdelta,cmbr.east)));
+//       grid[ri+1][rj].setMap(gmap);
+//     }
+//   }
+//   else if (ri == vc-1){
+//     if (rj == hc-1){
 
-    }
-    else{
-      grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north+rdelta,cmbr.east)));
-      grid[ri][rj].setMap(gmap);
+//     }
+//     else{
+//       grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north+rdelta,cmbr.east)));
+//       grid[ri][rj].setMap(gmap);
 
-      var cmbr2 = createMBR(grid[ri-1][rj]);
-      grid[ri-1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south+rdelta,cmbr.west), new google.maps.LatLng(cmbr2.north,cmbr.east)));
-      grid[ri-1][rj].setMap(gmap);
-    }
+//       var cmbr2 = createMBR(grid[ri-1][rj]);
+//       grid[ri-1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south+rdelta,cmbr.west), new google.maps.LatLng(cmbr2.north,cmbr.east)));
+//       grid[ri-1][rj].setMap(gmap);
+//     }
 
-  }
+//   }
 
   
-});
+// });
 
-$('#showGrid').click(function(e){
-    var gran = getParameterByName("bolts");
-//    var root = {};
-//    root.parent = null;
-//    root.cell = gmap;
-//    root.lod = 1;
-//    root.child = null;
-//    buildGrid(gmap,"#000000", gran, gran, 1);
-});
+// $('#showGrid').click(function(e){
+//     var gran = getParameterByName("bolts");
+// //    var root = {};
+// //    root.parent = null;
+// //    root.cell = gmap;
+// //    root.lod = 1;
+// //    root.child = null;
+// //    buildGrid(gmap,"#000000", gran, gran, 1);
+// });
 
-$('#addNode').click(function(event) {
-    addNode();
-  });
-
-  $('#addEdge').click(function(event) {
-    addEdge();
-  });
 
 
 function buildRect(rcolor){
     var viewMBr = createMBR(gmap);
     var viewBounds = gmap.getBounds();
 }
-
-
-function addNode() {
-
-    var i = Math.floor((Math.random() * 100) + 1);    
-    nodes.add([{id: "n"+i, label: 'Node '+i}]);
-    console.log("addning a node id="+i);
-    console.log("length = "+nodes.length);
-  }
-
-  function addEdge() {
-    var ids = nodes.getIds()
-    var i = Math.floor((Math.random() * ids.length));
-    var j = Math.floor((Math.random() * ids.length));
-    if (i == j) {
-      if (j == ids.length-1){
-        j == 0;
-      }
-      else{
-        j = j +1;
-      }
-    }
-
-    edges.add({from: ids[i], to: ids[j]})
-    console.log("adding an edge between ("+ids[i]+","+ids[j]+")");
-  }
-
-  function getLevels(node){
-
-    if (node.children != undefined){
-      return getLevels(node.children[0])+1;
-    }
-    else {return 1;}
-  }
-
-   function addNodeQPlan(node, parentId, k, lv) {
-    if (node != undefined){
-      var nodeId = node.type+""+(++k);
-    var nodeLabel = node.type+" : ";
-    if (node.attributes != undefined){
-      nodeLabel += node.attributes.toString();
-    }
-    
-    if (node.conditions != undefined){
-      nodeLabel += node.conditions.toString();
-    }
-
-    if (node.name != undefined){
-      nodeLabel +=  node.name;
-    }
-
-    var n = [{id: nodeId, label: nodeLabel, level:(k)}];
-    console.log($.toJSON(n));
-    nodes.add(n);
-    console.log("adding a node ("+nodeId+")");
-    edges.add({from: nodeId, to: parentId});
-    console.log("adding an edge between ("+nodeId+","+parentId+")");
-    if (node.children != undefined){
-      for (var i = 0; i < node.children.length; i++) {
-        addNodeQPlan(node.children[i],nodeId,k,lv);
-      };
-
-    }
-
-    }
-    
-
-  }
 
    		});
 
@@ -543,29 +422,6 @@ function addNode() {
         console.log(createMBR(rect));
         uiState.rangeList[qid].rect = rect;
       }
-
-
-      function updateRangeList(){
-        $("#rangeList").empty();
-        for (var i = 0; i < uiState.rangeList.length; i++) {
-          var t = uiState.rangeList[i];
-          $("#rangeList").append('<li>'+t.name+'</li>');
-        };
-      }
-
-      function updateKNNPred(qid, marker){
-        // console.log(marker);
-        uiState.knnList[qid].marker = marker;
-      }
-
-      function updateKNNList(){
-        $("#knnList").empty();
-        for (var i = 0; i < uiState.knnList.length; i++) {
-          var t = uiState.knnList[i];
-          $("#knnList").append('<li>'+t.name+'</li>');
-        };
-      }
-
 
       
     function createMBR(rect){
@@ -651,6 +507,18 @@ function drawMBR(mbr, rcolor){
         bounds: cellbounds
       });
       
+    cell.addListener("click", function(){
+      console.log(mbr);
+      $.ajax( "hotspot", {
+            method: "POST",
+            data: $.toJSON(mbr),
+            dataType: "json"
+        }).done(function(data){
+            console.log(data);
+        });
+
+    });
+
       return cell;
 }
 
@@ -749,12 +617,17 @@ return _grid;
 }      
     </script>
     <style type="text/css">
+    #map-canvas{
+      width:1024px;
+      margin: auto;      
+      
+    }
     #controlpanel {
       position:relative;width:100%;z-index:5;
       /*background-color:#B3D1FF;*/
       background-color: black;
       display: block;
-      height: 7em;
+      height: 6em;
       /*overflow: scroll;*/
     }
     #side {
@@ -837,7 +710,9 @@ return _grid;
     }
     
     .page{
-        height: 37em;
+        height: 100%;
+        padding-top: 0.5em;
+        background: #E5E3DF;
     }
     </style>
   </head>
