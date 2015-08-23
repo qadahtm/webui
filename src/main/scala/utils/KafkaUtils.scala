@@ -20,15 +20,24 @@
 
 package utils
 
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerConfig
 import java.util.Properties
+import java.util.concurrent.TimeUnit
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.concurrent.duration.Duration
+import scala.io.Source
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorSystem
 import kafka.javaapi.consumer.ConsumerConnector
 import kafka.serializer.StringDecoder
+import spray.json.JsNumber
+import spray.json.JsObject
+import spray.json.JsString
+import org.apache.kafka.clients.producer.ProducerRecord
 
 object KafkaUtils {
 
@@ -74,4 +83,49 @@ object KafkaUtils {
      new KafkaConsumer[String,String](props)
   }
 
+}
+
+object KafkaFileProducer {
+  
+  val producer = KafkaUtils.createStringKafkaProducer("localhost:9092")
+//  val consumer = KafkaUtils.createHLKafkaConsumer("localhost:2181","test")
+  
+  val asystem = ActorSystem("KafkaUtils", Helper.getActorSystemConfig("localhost","9015"))
+  
+  
+  
+  def main(args: Array[String]) : Unit = {
+    
+    import asystem.dispatcher
+    
+    var tuples = Source.fromFile(Helper.getConfig().getString("kafka.test.producer.datafile")).getLines()
+    
+    
+    asystem.scheduler.schedule(Duration.create(0, TimeUnit.SECONDS) , Duration.create(Helper.getConfig().getInt("kafka.test.producer.rate"), TimeUnit.SECONDS)) {
+      
+      if (!tuples.hasNext) tuples = Source.fromFile(Helper.getConfig().getString("kafka.test.producer.datafile")).getLines()
+      val message = tuples.next()
+      
+      val rec = new ProducerRecord[String,String](Helper.getConfig().getString("kafka.test.producer.topic"),"test",message)
+      val md = producer.send(rec).get
+//      println(message)
+    }
+    
+    
+    asystem.awaitTermination()
+  }
+}
+
+
+class KafkaConsumerActor(val topic:String) extends Actor with ActorLogging {
+
+  
+  
+
+  def receive = {
+    
+    case _ => {
+      log.info("got something")
+    }
+  }
 }

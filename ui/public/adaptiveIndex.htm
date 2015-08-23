@@ -286,6 +286,11 @@ $("#title").click(function(){
         
 
         runningvis.timer = setInterval(function(){
+
+          $.getJSON( "kafka/adaptiveIndex", gmbr,function( data ) {
+            console.log(data);
+          });
+
           $.getJSON( "adaptiveIndex", gmbr,function( data ) {
             // $.getJSON( "adaptive", gmbr,function( data ) { // AQWA old demo data
     //        console.log($.toJSON(gmbr));

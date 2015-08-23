@@ -165,7 +165,8 @@ function initialize() {
     $.ajax("tornado/config").done(function(conf){
         console.log(conf);
         if (conf.kafka.enabled){
-            uiState.es = new EventSource("kafka/output-stream");
+            uiState.es = new EventSource("kafka/output-stream2");
+            console.log("listening to server events : kafka/output-stream2")
         }
         else {
             uiState.es = new EventSource("/mock-output-stream");
@@ -176,8 +177,8 @@ function initialize() {
         var sse = $.parseJSON(e.data);
         var ssetype = sse.type;
         if (conf.kafka.enabled && (typeof sse.data) === "string"){
-            console.log(sse);
-            console.log(sse.data);    
+            // console.log(sse);
+            // console.log(sse.data);    
             sse = eval("(" + sse.data + ")");
         }
         // console.log(e);

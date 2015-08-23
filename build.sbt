@@ -18,6 +18,8 @@ seq(
         ,"TornadoStormKafkaTest" -> "examples.TornadoStormKafkaTest"
         ,"TestRandomTextGen" -> "tornado.ui.TestRandomTextGen"
         ,"StreamConroller" -> "utils.StreamController"    
+        ,"KafkaFileProducer" -> "utils.KafkaFileProducer"
+        ,"Playground" -> "utils.Playground"    
 	),
         // Add custom settings here
         // [Optional] JVM options of scripts (program name -> Seq(JVM option, ...))

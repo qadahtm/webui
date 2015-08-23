@@ -75,7 +75,9 @@ import ui.KafkaTopicStreamer
 import spray.http.StatusCodes
 import org.apache.kafka.clients.producer.ProducerRecord
 import spray.json.JsBoolean
-
+import scala.concurrent.Await
+import akka.pattern.ask
+import akka.util.Timeout
 
 object TornadoWebserver extends App with SimpleRoutingApp {
 
@@ -99,6 +101,12 @@ object TornadoWebserver extends App with SimpleRoutingApp {
 
   val resultPubSubActor = asystem.actorOf(Props(classOf[PubSubActor[String]]), conf.getString("webserver.resultPubsubActorName"))
   log.info("created result pubsub service at : " + resultPubSubActor.path)
+  
+  val kafkaOutputPubSub = asystem.actorOf(Props(classOf[KafkaPubSub],  conf.getString("kafka.zk") , "outputgroup", conf.getString("kafka.topics.output")), "pubsub-output")
+  log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.output")+") at : " + kafkaOutputPubSub.path)
+  
+  val kafkaAdaptivePubSub = asystem.actorOf(Props(classOf[KafkaPubSub], conf.getString("kafka.zk"), "aigroup", conf.getString("kafka.topics.adaptiveIndexUpdates")), "pubsub-adaptive")
+  log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.adaptiveIndexUpdates")+") at : " + kafkaOutputPubSub.path)
   
   val EventStreamType = register(
     MediaType.custom(
@@ -382,15 +390,28 @@ object TornadoWebserver extends App with SimpleRoutingApp {
             val streamer = system.actorOf(aprops)
           }
       } ~
-      path("kafka" / "output-stream") {
+      path("kafka" / "output-stream2") {
         ctx =>
           {
             log.info("Kafka output stream")
-            val aprops = Props(classOf[KafkaTopicStreamer], ctx.responder, Helper.getConfig().getString("kafka.topics.output"), (Helper.selfString _), EventStreamType)
+            val aprops = Props(classOf[KafkaActorStreamer], ctx.responder, kafkaOutputPubSub, Helper.getConfig().getString("kafka.topics.output"), (Helper.selfString _), EventStreamType)
             val streamer = system.actorOf(aprops)
 
           }
-      } ~
+      } ~      
+      path("kafka" / "adaptiveIndex") {
+        ctx =>
+          {
+            implicit val timeout = Timeout(5 seconds)
+//            log.info("======================= Kafka adaptive stream")
+            val fmsg = kafkaAdaptivePubSub ? GetLastMessage 
+            
+            val result = Await.result(fmsg, timeout.duration).asInstanceOf[KafkaStringMessage]
+            
+            
+            ctx.complete(result.x)
+          }
+      } ~      
       path("adaptiveIndex") {
         get {
             ctx =>

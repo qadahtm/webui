@@ -228,6 +228,74 @@ class KafkaTopicStreamerWithFiltering(peer: ActorRef, topic: String, formatSSE: 
 
 }
 
+class KafkaActorStreamer(peer: ActorRef, kconsumer: ActorRef, topic: String, formatSSE: String => JsValue, EventStreamType: MediaType) extends Actor with ActorLogging {
+
+  val kafkaQueue = scala.collection.mutable.Queue[String]()
+
+  val conf = ConfigFactory.parseFile(new File("application.conf"))
+
+  context.watch(peer)
+
+  kconsumer ! SubscribeStreamer(self)
+  
+  val streamStart = JsObject("type" -> JsString("stream-start"))
+
+  val responseStart = HttpResponse(entity = HttpEntity(EventStreamType.withCharset(HttpCharsets.`UTF-8`), Helper.createSSE("ping", streamStart.toString)))
+
+  peer ! ChunkedResponseStart(responseStart).withAck(SendReady)
+  
+  
+
+  implicit val ec = this.context.system.dispatcher
+
+  var waiting = false
+
+  def receive = {
+    case Ready => {
+      this.context.system.scheduler.scheduleOnce(500 milliseconds, self, SendReady)
+    }
+    case SendReady => {
+
+      if (kafkaQueue.size == 0) waiting = true
+
+      while (kafkaQueue.size > 0) {
+        val resp = JsObject("type" -> JsString(topic), "data" -> formatSSE(kafkaQueue.dequeue))
+        val newChunk = MessageChunk(Helper.createSSE("ping", resp.toString()))
+        peer ! newChunk.withAck(SendReady)
+
+      }
+
+    }
+
+    case Http.PeerClosed => {
+      log.info("Peer terminated, ending respnse streaming ")
+      kconsumer ! UnsubscribeStreamer(self)
+      self ! PoisonPill
+
+    }
+
+    case Tcp.Abort | Tcp.Aborted => {
+      log.info("Peer aborted, ending respnse streaming ")
+      kconsumer ! UnsubscribeStreamer(self)
+      self ! PoisonPill
+    }
+
+    case KafkaStringMessage(kafkaMsg) => {
+      kafkaQueue.enqueue(kafkaMsg)
+      //        log.info("Receieved kafka message: " + kafkaMsg)
+
+      if (waiting && kafkaQueue.size == 1) {
+        self ! SendReady
+      }
+    }
+
+    case x: Any => {
+      log.info("Receieved something unexpected: " + x.getClass.toString)
+    }
+  }
+
+}
+
 class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) extends Actor with ActorLogging {
 
   log.info("starting respnse streaming ")

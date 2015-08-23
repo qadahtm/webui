@@ -14,6 +14,7 @@ import kafka.serializer.StringDecoder
 import akka.actor.ActorRef
 import kafka.javaapi.consumer.ConsumerConnector
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration._
 
 object KafkaActorGroupConsumer extends App {
 
@@ -73,39 +74,72 @@ object KafkaConsumerHelper {
 
 case class SubscribeStreamer(ar:ActorRef)
 case class UnsubscribeStreamer(ar:ActorRef)
-case class GetLastTuple()
+object GetLastMessage
 
 class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with ActorLogging {
   implicit val ec = this.context.system.dispatcher
   val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
     val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
     val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
-
     val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
     val streams = consumerMap.get(topic)
   val stream = streams.get(0)
   
   val localSubs = ArrayBuffer[ActorRef]()
   
+//  val f = Future {
+//      val iter = stream.iterator()
+//      if (iter.hasNext()){
+//        val x =  iter.next()
+//        consumer.commitOffsets()        
+//        localSubs.map { _ ! (new KafkaStringMessage(x.message)) }
+//      }
+//    }
+  
+  this.context.system.scheduler.scheduleOnce( 500 milliseconds, self, "checkMessages")
+  this.context.system.scheduler.schedule( 1000 milliseconds,  2000 milliseconds, self, "printCounts")
+  var lastMessage = ""
   
   def receive = {
-    case "checkMsgs" => {
-      val f = Future {
-        stream.iterator.foreach(x => {
-          //          log.info("KafkaMessage " + threadNum + " : " + x.message)
-          
-//          localSubs.map { x ! (new KafkaStringMessage(x.message)) }
-          
-          
-          // TODO: Need to commit offsets, validate that this works
-          consumer.commitOffsets()
-        })
+      
+    case "printCounts" => {
+       log.info("client count = "+localSubs.size)
+    }
+    
+    case "checkMessages" => {
+      
+      val iter = stream.iterator()
+      if (iter.hasNext()){
+        val x =  iter.next()
+        consumer.commitOffsets()
+        lastMessage = x.message()
+//        log.info("sending out :"+lastMessage)
+        localSubs.map { _ ! (new KafkaStringMessage(lastMessage)) }        
         
       }
+      else {
+        log.info("no messages = "+localSubs.size)
+      }
+      
+      this.context.system.scheduler.scheduleOnce( 100 milliseconds, self, "checkMessages")
+    }
+    
+    case SubscribeStreamer(aref) => {
+      log.info("subscribing  "+aref)
+      localSubs += aref
+    }
+    
+    case UnsubscribeStreamer(aref) =>{
+      log.info("unsubscriBing  "+aref)
+      localSubs -= aref
+    }
+    
+    case GetLastMessage => {
+      sender ! (new KafkaStringMessage(lastMessage))
     }
     
     
-    case _ => log.info("got a message")
+    case x:Any => log.info("got a message : "+ x.getClass().getName)
   }
 }
 
@@ -118,6 +152,7 @@ class KafkaStringConsumer(val consumer:ConsumerConnector, val stream: KafkaStrea
   def receive = {
     case "checkMsgs" => {
       val f = Future {
+        
         stream.iterator.foreach(x => {
           //          log.info("KafkaMessage " + threadNum + " : " + x.message)
           target ! (new KafkaStringMessage(x.message))
