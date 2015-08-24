@@ -154,9 +154,21 @@ var runningvis = {
 $(document).ready(function() {
 
 initializeMap();
+
 gmap.addListener("click",function(data){
   console.log(data.latLng.lat());
   console.log(typeof data);
+  var p = {};
+  p.lat = data.latLng.lat();
+  p.lng = data.latLng.lng();
+
+  $.ajax( "hotspot", {
+      method: "POST",
+      data: $.toJSON(p),
+      dataType: "json"
+  }).done(function(data){
+      console.log(data);
+  });
 });
 
 
@@ -223,77 +235,9 @@ $("#title").click(function(){
     }
     
 });
-// initialize 
-// grid = [];
 
-// for (var i = 0; i < hc ; i++){
-//   grid.push([]);
-//   for (var j = 0; j < vc; j++) {
-//     grid[i].push({});
-//   };
-
-// } 
-
-
-// console.log($.toJSON(grid));
-
-      
-        // Intialize google maps
-    	  // google.maps.event.addDomListener(window, 'load', initialize);
 
 var gmapbounds;
-// $('#showAdaptive').click(function () {
-//   var ri = Math.floor((Math.random() * (hc)));
-//   var rj = Math.floor((Math.random() * (vc)));
-//   var ro = Math.floor((Math.random() * 2));
-//   var rinc = Math.floor((Math.random() * 2));
-//   var factor = Math.floor((Math.random() * 6)+2);
-//   console.log("chosen random i = "+ri+" , j = "+rj+" o = "+ro);
-//   console.log(createMBR(grid[ri][rj]));
-//   var cmbr = createMBR(grid[ri][rj]);
-
-//   var rdelta = (Math.random() * (cmbr.north-cmbr.south))/factor;
-//   if (ri == 0){
-//     if (rj == hc-1){
-
-//     }
-//     else{
-//       grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south-rdelta,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
-//       grid[ri][rj].setMap(gmap);
-
-//       var cmbr2 = createMBR(grid[ri+1][rj]);
-//       grid[ri+1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south,cmbr.west), new google.maps.LatLng(cmbr2.north-rdelta,cmbr.east)));
-//       grid[ri+1][rj].setMap(gmap);
-//     }
-//   }
-//   else if (ri == vc-1){
-//     if (rj == hc-1){
-
-//     }
-//     else{
-//       grid[ri][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north+rdelta,cmbr.east)));
-//       grid[ri][rj].setMap(gmap);
-
-//       var cmbr2 = createMBR(grid[ri-1][rj]);
-//       grid[ri-1][rj].setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr2.south+rdelta,cmbr.west), new google.maps.LatLng(cmbr2.north,cmbr.east)));
-//       grid[ri-1][rj].setMap(gmap);
-//     }
-
-//   }
-
-  
-// });
-
-// $('#showGrid').click(function(e){
-//     var gran = getParameterByName("bolts");
-// //    var root = {};
-// //    root.parent = null;
-// //    root.cell = gmap;
-// //    root.lod = 1;
-// //    root.child = null;
-// //    buildGrid(gmap,"#000000", gran, gran, 1);
-// });
-
 
 
 function buildRect(rcolor){
@@ -419,17 +363,18 @@ function drawMBR(mbr, rcolor){
         bounds: cellbounds
       });
       
-    cell.addListener("click", function(){
-      console.log(mbr);
-      $.ajax( "hotspot", {
-            method: "POST",
-            data: $.toJSON(mbr),
-            dataType: "json"
-        }).done(function(data){
-            console.log(data);
-        });
+      // designate a rectangle as hotspot
+    // cell.addListener("click", function(){
+    //   console.log(mbr);
+    //   $.ajax( "hotspot", {
+    //         method: "POST",
+    //         data: $.toJSON(mbr),
+    //         dataType: "json"
+    //     }).done(function(data){
+    //         console.log(data);
+    //     });
 
-    });
+    // });
 
       return cell;
 }

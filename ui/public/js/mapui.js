@@ -208,9 +208,9 @@ function initialize() {
 
             if (qi !== -1){
                 var qo = uiState.catalog.queries.vals[qi];
+                // console.log(qo);
 
-
-                var iconUrl = createColoredMarker(color);
+                var iconUrl = createColoredMarker(qo.outputColor);
                 // console.log(iconUrl);
                 // create map element
                 var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);

@@ -19,10 +19,10 @@ where s1.rid = "r1" and s2.roomTemp = 3;
 
 {
 // Need to comment in production
-//var uiState = {
-//resolveRangePredVar: function(){return null;},
-//resolveKNNPredVar:function(){return null;}
-//};
+var uiState = {
+resolveRangePredVar: function(){return null;},
+resolveKNNPredVar:function(){return null;}
+};
 
    
 
@@ -91,7 +91,8 @@ var jconds = [];
 
 var i = sel.wc.conditions.length-1;
 while (sel.wc.conditions.length && i >= 0){
-//console.log(sel.wc.conditions);
+console.log(sel.wc.conditions);
+//console.log(sel.wc.conditions[i].lhs);
 var sn = sel.wc.conditions[i].lhs.sourceName;
 var cleft = sel.wc.conditions[i].lhs;
 var cright = sel.wc.conditions[i].rhs;
@@ -192,7 +193,7 @@ scondition = lhs:cident sp cop:coper sp rhs:cident
 { 
 //console.log(obj2);
 if (pname == "KNN") 
-return {argc:3,jcond:false,op:pname,kval:parg,focal:bindVar(pname,obj2)};
+return {argc:3,jcond:false,op:pname,kval:parg,lhs:obj1,rhs:{name:"focal", val:bindVar(pname,obj2)}};
 else 
 return {argc:3,jcond:true,op:pname,lhs:obj1,rhs:obj2,cval:parg};}
 
@@ -245,7 +246,7 @@ predName2n =
 
 func1p = "1p"
 
-func2p = "INSIDE" / "CONTAINS" / "OVERLAPS"
+func2p = "INSIDE" / "CONTAINS" / "OVERLAPS" / "SEMANTIC"
 
 func3p = "WITHIN_DISTANCE" / "KNN"
 
