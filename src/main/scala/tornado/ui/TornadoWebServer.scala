@@ -102,11 +102,17 @@ object TornadoWebserver extends App with SimpleRoutingApp {
   val resultPubSubActor = asystem.actorOf(Props(classOf[PubSubActor[String]]), conf.getString("webserver.resultPubsubActorName"))
   log.info("created result pubsub service at : " + resultPubSubActor.path)
   
-  val kafkaOutputPubSub = asystem.actorOf(Props(classOf[KafkaPubSub],  conf.getString("kafka.zk") , "outputgroup", conf.getString("kafka.topics.output")), "pubsub-output")
-  log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.output")+") at : " + kafkaOutputPubSub.path)
+  var kafkaOutputPubSub: ActorRef = null
+  var kafkaAdaptivePubSub: ActorRef = null
   
-  val kafkaAdaptivePubSub = asystem.actorOf(Props(classOf[KafkaPubSub], conf.getString("kafka.zk"), "aigroup", conf.getString("kafka.topics.adaptiveIndexUpdates")), "pubsub-adaptive")
-  log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.adaptiveIndexUpdates")+") at : " + kafkaOutputPubSub.path)
+  if (Helper.getConfig().getBoolean("kafka.enabled")){
+    kafkaOutputPubSub = asystem.actorOf(Props(classOf[KafkaPubSub],  conf.getString("kafka.zk") , "outputgroup", conf.getString("kafka.topics.output")), "pubsub-output")
+    log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.output")+") at : " + kafkaOutputPubSub.path)
+    
+    kafkaAdaptivePubSub = asystem.actorOf(Props(classOf[KafkaPubSub], conf.getString("kafka.zk"), "aigroup", conf.getString("kafka.topics.adaptiveIndexUpdates")), "pubsub-adaptive")
+    log.info("created kafka pubsub service for topic("+conf.getString("kafka.topics.adaptiveIndexUpdates")+") at : " + kafkaOutputPubSub.path)  
+  }
+  
   
   val EventStreamType = register(
     MediaType.custom(
@@ -393,23 +399,29 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       path("kafka" / "output-stream2") {
         ctx =>
           {
-            log.info("Kafka output stream")
-            val aprops = Props(classOf[KafkaActorStreamer], ctx.responder, kafkaOutputPubSub, Helper.getConfig().getString("kafka.topics.output"), (Helper.selfString _), EventStreamType)
-            val streamer = system.actorOf(aprops)
-
+            if (Helper.getConfig().getBoolean("kafka.enabled")){
+              log.info("Kafka output stream")
+              val aprops = Props(classOf[KafkaActorStreamer], ctx.responder, kafkaOutputPubSub, Helper.getConfig().getString("kafka.topics.output"), (Helper.selfString _), EventStreamType)
+              val streamer = system.actorOf(aprops)  
+            }
+            else {
+              ctx.complete(StatusCodes.NotFound)
+            }
           }
       } ~      
       path("kafka" / "adaptiveIndex") {
         ctx =>
           {
-            implicit val timeout = Timeout(5 seconds)
+            if (Helper.getConfig().getBoolean("kafka.enabled")){
+              implicit val timeout = Timeout(5 seconds)
 //            log.info("======================= Kafka adaptive stream")
-            val fmsg = kafkaAdaptivePubSub ? GetLastMessage 
-            
-            val result = Await.result(fmsg, timeout.duration).asInstanceOf[KafkaStringMessage]
-            
-            
-            ctx.complete(result.x)
+              val fmsg = kafkaAdaptivePubSub ? GetLastMessage 
+              val result = Await.result(fmsg, timeout.duration).asInstanceOf[KafkaStringMessage]
+              ctx.complete(result.x)
+            }    
+            else {
+              ctx.complete(StatusCodes.NotFound)
+            }
           }
       } ~      
       path("adaptiveIndex") {

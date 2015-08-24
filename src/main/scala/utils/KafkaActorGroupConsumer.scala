@@ -79,10 +79,10 @@ object GetLastMessage
 class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with ActorLogging {
   implicit val ec = this.context.system.dispatcher
   val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
-    val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
-    val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
-    val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
-    val streams = consumerMap.get(topic)
+  val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
+  val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
+  val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
+  val streams = consumerMap.get(topic)
   val stream = streams.get(0)
   
   val localSubs = ArrayBuffer[ActorRef]()

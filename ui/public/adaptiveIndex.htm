@@ -31,8 +31,6 @@
     <script type="text/javascript">
 
 var uiState = {
-  knnList:[],
-  rangeList:[], 
   resolveRangePredVar: function (v){
     var i =0;
     while (i < uiState.rangeList.length){
@@ -116,26 +114,6 @@ var grid = [];
       };
 
 
-
-
-    var drawingOptions = {
-      drawingMode: null,//google.maps.drawing.OverlayType.RECTANGLE,
-      drawingControl: true,
-      drawingControlOptions: {
-        position: google.maps.ControlPosition.TOP_CENTER,
-        drawingModes: [
-          // google.maps.drawing.OverlayType.CIRCLE,
-          // google.maps.drawing.OverlayType.POLYGON,
-          // google.maps.drawing.OverlayType.MARKER,
-          google.maps.drawing.OverlayType.RECTANGLE
-        ]
-      },
-      markerOptions:{draggable:true},
-      rectangleOptions:beforeRectOptions
-
-    };
-
-
 var es; // event stream handle
 
     
@@ -157,87 +135,13 @@ var es; // event stream handle
           mapTypeControl:false,
           streetViewControl:false,
           minZoom:2,
-          // maxZoom:2,
-          // draggable: false,
+          maxZoom:2,
+          draggable: false,
           zoom: 2
         };
         var map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
         gmap = map;
-
-
-
-      //   var allowedBounds = new google.maps.LatLngBounds(
-      //    new google.maps.LatLng(70.33956792419954, 178.01171875), 
-      //    new google.maps.LatLng(83.86483689701898, -88.033203125)
-      // );
-      // var lastValidCenter = map.getCenter();
-
-      // google.maps.event.addListener(map, 'center_changed', function() {
-
-      //   if (gmap.getZoom() == 2){
-      //     gmap.setCenter(new google.maps.LatLng(0,0));
-      //   }
-
-      //     // if (allowedBounds.contains(map.getCenter())) {
-      //     //     // still within valid bounds, so save the last valid position
-      //     //     lastValidCenter = map.getCenter();
-      //     //     return; 
-      //     // }
-
-      //     // not valid anymore => return to last valid position
-      //     // map.panTo(lastValidCenter);
-      // });
-
-        drawingOptions.rectangleOptions = beforeRectOptions;
-
-      drawingManager = new google.maps.drawing.DrawingManager(drawingOptions);
-      drawingManager.addListener("markercomplete",function(e){
-        if ((uiState.knnList.length) == drawingContext.rectangleMaxCount){ //TODO change limit
-          e.setMap(null);
-        }
-        else{
-          var qid = uiState.knnList.length;
-          uiState.knnList.push({show:true,name:"f"+qid,marker:e});  
-
-          e.addListener("position_changed",function(){
-            updateKNNPred(qid, this);  
-          });
-          updateKNNList();  
-        }
-      });
-      
-      drawingManager.addListener("rectanglecomplete",function(e){
-        // console.log("a rectangle is completed");
-        // console.log(e.getBounds());
-        // console.log("current count = "+drawingContext.rectangles.length);
-        if ((uiState.rangeList.length) == drawingContext.rectangleMaxCount){
-          // console.log("max count has reached which is "+drawingContext.rectangleMaxCount);
-          e.setMap(null);
-        }
-        else{
-          var qid = uiState.rangeList.length;
-          uiState.rangeList.push({show:true,name:"r"+qid,rect:e});  
-
-          e.addListener("bounds_changed",function(){
-              
-            updateMBR(qid, this);  
-            var qbounds = createMBR(this);
-//            console.log("qbounds :"+$.toJSON(qbounds));
-            checkSplit(bolts,qbounds)
-            
-          });
-          
-          
-          updateRangeList();  
-        }
-
-      });
-
-      // drawingManager.setMap(map);
-
-
-
 
 }
 
@@ -250,7 +154,10 @@ var runningvis = {
 $(document).ready(function() {
 
 initializeMap();
-//gmap.addListener("rightclick",function(){
+gmap.addListener("click",function(data){
+  console.log(data.latLng.lat());
+  console.log(typeof data);
+});
 
 
 $("#title").click(function(){
