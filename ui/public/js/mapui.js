@@ -593,6 +593,8 @@ function updateRegisteredQueries(qast, msg){
 // Doc load 
 $(document).ready(function () {
 
+
+
     nodes = new vis.DataSet();
     edges = new vis.DataSet();
 
@@ -670,7 +672,30 @@ $(document).ready(function () {
 
     // Intialize google maps
 //                google.maps.event.addDomListener(window, 'load', initialize);
-    initialize()
+    initialize();
+
+    // set examples menu
+    $('#rqex1').click(function(){
+        // console.log(uiState.editor.getDoc().getValue());
+        uiState.editor.getDoc().setValue($('#rq1r0').text());           
+    });
+
+    $('#knnqex1').click(function(){
+        uiState.editor.getDoc().setValue($('#knnqf0').text());    
+    });
+
+    $('#knnqex2').click(function(){
+        uiState.editor.getDoc().setValue($('#knnjq').text());    
+    });
+
+    $('#jqex').click(function(){
+        uiState.editor.getDoc().setValue($('#rjq2r0').text());    
+    });
+
+
+    
+    
+
     getDemoData();
     
     $('#test').click(function (event) {

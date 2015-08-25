@@ -77,14 +77,14 @@
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Query Examples <span class="caret"></span></a>
               <ul class="dropdown-menu">
-                <li><a href="#">Range Query example 1</a></li>
-                <li><a href="#">Range Query example 2</a></li>
-                <li><a href="#">Range Query example 3</a></li>
+                <li><a id="rqex1" href="#">Range Query example 1</a></li>
+                <!-- <li><a id="rqex2" href="#">Range Query example 2</a></li> -->
+                <!-- <li><a id="rqex3" href="#">Range Query example 3</a></li> -->
                 <li role="separator" class="divider"></li>
-                <li><a href="#">KNN query example 1</a></li>
-                <li><a href="#">KNN query example 2</a></li>
+                <li><a id="knnqex1" href="#">KNN-Select query example</a></li>
+                <li><a id="knnqex2" href="#">KNN-Join query example 2</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="#">Join query example</a></li>
+                <li><a id="jqex" href="#">Join query example</a></li>
               </ul>
             </li>
             <li><a href="adaptiveIndex.htm?urate=900">Adaptive Index</a></li>
@@ -142,11 +142,9 @@
         <div class="panel">
           <div id="textEntry">
             <textarea id="textData" >REGISTER QUERY q1 AS
-SELECT * FROM OSM_Data AS O, Tweets AS T
-WHERE WITHIN_DISTANCE(O.loc,T.loc,1)
-and CONTAINS(O.tags,"attraction")
-and INSIDE(T.loc,currentView)
-and OVERLAPS(O.tags, T.text);</textarea>
+SELECT * FROM Tweets AS T
+WHERE OVERLAPS(T.text,"food")
+and INSIDE(T.loc,@r0);</textarea>
           </div>                
         </div>      
       </div>
@@ -181,8 +179,29 @@ and OVERLAPS(O.tags, T.text);</textarea>
           <div id="visholder" class="hidden col-md-12"></div>  
         </div>
       </div>
+      <div id="rq1r0">REGISTER QUERY rq1 AS
+SELECT * FROM Tweets AS T
+WHERE OVERLAPS(T.text,"food")
+and INSIDE(T.loc,@r0);
       </div>
-      <div id="thumbholder"></div>
+      <div id="rjq2r0">REGISTER QUERY rjq AS
+SELECT * FROM OSM_Data AS O, Tweets AS T
+WHERE WITHIN_DISTANCE(O.loc,T.loc,10)
+and INSIDE(T.loc,@r0)
+and OVERLAPS(O.text, T.text)
+and CONTAINS(T.text, "love");</div>
+<div id="knnqf0">REGISTER QUERY knnq1 AS
+SELECT * FROM Tweets AS T
+WHERE OVERLAPS(T.text,"food")
+and KNN(T.loc,@f0,10);
+      </div>
+      <div id="knnjq">REGISTER QUERY knnjq AS
+SELECT * FROM OSM_Data AS O, Tweets AS T
+WHERE KNN(O.loc,T.loc,10)
+and OVERLAPS(O.text, T.text)
+and CONTAINS(T.text, "love");
+      </div>
+      </div>      
     </div> <!-- /.container -->
     
     <!-- Bootstrap core JavaScript
