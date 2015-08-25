@@ -64,7 +64,8 @@ object Catalog {
       val qname = q._1
       val qjso = q._2
       val color = getStringValue("outputColor", qjso)
-      JsObject("name" -> JsString(qname), "outputColor" -> JsString(color))
+      val sqltext = getStringValue("sqltext", qjso)
+      JsObject("name" -> JsString(qname), "outputColor" -> JsString(color), "sqltext" -> JsString(sqltext))
     } }.toVector)
   }
   

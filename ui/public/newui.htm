@@ -36,6 +36,7 @@
 
 
     <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
+    <link type="text/css" rel="stylesheet" href="css/bootstrap-lightbox.min.css">
     <!-- <link type="text/css" rel="stylesheet" href="css/vis.css"> -->
     <link type="text/css" rel="stylesheet" href="css/mapui.css">
 
@@ -46,6 +47,7 @@
     <script type="text/javascript" src="js/randomColor.js"></script>
     <script src="js/peg-0.8.0.min.js"></script>
     <script src="js/jsDump.js" ></script>
+    
     <script type="text/javascript" src="js/vis.js"></script>
     
 
@@ -91,7 +93,7 @@
       </div>
     </nav>
     <div class="row collapse bg-gray-lighter" id="syslogpanel">
-      <div class="col-md-8 sectionHeight">
+      <div class="col-md-6 sectionHeight">
           <div class"panel panel-info" >
               <div class="panel-heading">
                 <h3 class="panel-title">Session Log</h3>
@@ -100,7 +102,7 @@
               </div>
             </div>
         </div>
-        <div class="col-md-4 sectionHeight">
+        <div class="col-md-6 sectionHeight">
           <div class="row">
             <div class="col-md-12">
               <div id="regQueries" class="col-md-6">
@@ -180,7 +182,7 @@ and OVERLAPS(O.tags, T.text);</textarea>
         </div>
       </div>
       </div>
-
+      <div id="thumbholder"></div>
     </div> <!-- /.container -->
     
     <!-- Bootstrap core JavaScript
@@ -191,7 +193,8 @@ and OVERLAPS(O.tags, T.text);</textarea>
     <script src="js/bootstrap.min.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="js/ie10-viewport-bug-workaround.js"></script>
-
+    <script src="js/bootstrap-lightbox.min.js" ></script>
     <script type="text/javascript" src="js/mapui.js"></script>
+
   </body>
 </html>

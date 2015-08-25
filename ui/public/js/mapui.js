@@ -468,8 +468,8 @@ function createQueryListEntry(qobj){
     else if (cqobj.name) {
         djo.name = cqobj.name;
     }
-    
-    // add tag
+
+    // add tag for deletion
     djo.tag = "-";
     var colorIcon = $('<span class="glyphicon glyphicon-stop" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
     var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:black"></span>');
@@ -493,7 +493,10 @@ function createQueryListEntry(qobj){
             refreshOutputListing();
         });
     });
-    var qname = $('<p>'+djo.name+'</p>');
+    var qname = $('<div type="button" data-toggle="collapse" data-target="#sqltext-'+djo.name+'" aria-expanded="false" aria-controls="sqltext='+djo.name+'">'
+        +djo.name+'</div>');
+
+    var sqltextwell = $('<div class="collapse" id="sqltext-'+djo.name+'"><div class="well">'+cqobj.sqltext+'</div></div>');
 
     var displayIcon = $('<span class="glyphicon glyphicon-'+cqobj.checked+'" style="float:left;margin-right:0.6em;color:black"></span>');
     displayIcon.click(function(){
@@ -519,7 +522,8 @@ function createQueryListEntry(qobj){
             };              
         }        
     });
-    return $('<li class="list-group-item qdata"></li>').append(colorIcon).append(removeIcon).append(displayIcon).append(qname);
+
+    return $('<li class="list-group-item qdata"></li>').append(colorIcon).append(removeIcon).append(displayIcon).append(qname).append(sqltextwell);
 }
 
 function refreshRegiesteredQueryList(){
