@@ -138,20 +138,23 @@
         </div>
     </div>
     <div id="queryInput" class="row collapse in bg-gray-darker" >
-      <div class="col-md-9">
-        <div class="panel">
-          <div id="textEntry">
-            <textarea id="textData" >REGISTER QUERY q1 AS
+      <div class="">
+        <div class="col-md-9">
+          <div class="panel">
+            <div id="textEntry">
+              <textarea id="textData" >REGISTER QUERY q1 AS
 SELECT * FROM Tweets AS T
 WHERE OVERLAPS(T.text,"food")
 and INSIDE(T.loc,@r0);</textarea>
+            </div>                      
+          </div>
+          <div class="alert alert-info" id="pmsg">Enter Query above or choose a query from the examples menu</div> 
+        </div>
+        <div class="col-md-3">
+          <div role="group" class="btn-group-vertical col-md-6 center-block">
+            <button id="submitSQL" class="btn btn-default btn-sm">Submit</button>  
           </div>                
-        </div>      
-      </div>
-      <div class="col-md-3">
-        <div role="group" class="btn-group-vertical">
-          <button id="submitSQL" class="btn btn-default btn-sm">Submit</button>  
-        </div>                
+        </div>
       </div>
     </div>
     <div class="row fill bg-gray">
@@ -179,7 +182,12 @@ and INSIDE(T.loc,@r0);</textarea>
           <div id="visholder" class="hidden col-md-12"></div>  
         </div>
       </div>
-      <div id="rq1r0">REGISTER QUERY rq1 AS
+      <div id="sq1r0">REGISTER QUERY rq1 AS
+SELECT * FROM Tweets AS T
+WHERE SEMANTIC(T.text,"food")
+and INSIDE(T.loc,@r0);
+      </div>
+        <div id="rq1r0">REGISTER QUERY rq1 AS
 SELECT * FROM Tweets AS T
 WHERE OVERLAPS(T.text,"food")
 and INSIDE(T.loc,@r0);

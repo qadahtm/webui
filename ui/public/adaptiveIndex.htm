@@ -1,367 +1,189 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map-canvas { height: 100% }
+<head>
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+  <style type="text/css">
+  html { height: 100% }
+  body { height: 100%; margin: 0; padding: 0 }
+  #map-canvas { height: 100% }
 
-      #visholder{
-        width: 22em;
-        height: 22em;
-      }
-    </style>
-    
-    <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
-    <link type="text/css" rel="stylesheet" href="css/vis.css">
+  #visholder{
+    width: 22em;
+    height: 22em;
+  }
+  </style>
+
+  <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
+  <link type="text/css" rel="stylesheet" href="css/vis.css">
   
-    <script type="text/javascript" src="js/jquery.js"></script>
-     <script type="text/javascript" src="js/jquery.json.min.js"></script>
-    <script type="text/javascript" src="js/jquery-ui.min.js"></script>
-    <script type="text/javascript" src="js/portal.min.js"></script>
-    <script type="text/javascript" src="js/randomColor.js"></script>
-    <script src="js/peg-0.8.0.min.js"></script>
+  <script type="text/javascript" src="js/jquery.js"></script>
+  <script type="text/javascript" src="js/jquery.json.min.js"></script>
+  <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="js/portal.min.js"></script>
+  <script type="text/javascript" src="js/randomColor.js"></script>
+  <script src="js/peg-0.8.0.min.js"></script>
   <script src="js/jsDump.js" ></script>
   <script type="text/javascript" src="js/vis.js"></script>
   
 
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUTsGEgrknzPi1xdS1NxH5quGucPmpZoA&v=3.exp&libraries=drawing"></script>
 
-    <script type="text/javascript">
+  <script type="text/javascript">
+  var gmap = null;
 
-var uiState = {
-  resolveRangePredVar: function (v){
-    var i =0;
-    while (i < uiState.rangeList.length){
-      if (v == uiState.rangeList[i].name) {
-        return createMBR(uiState.rangeList[i].rect);
-      }
-      i++;          
-    }
-    return null;
-  },
-  resolveKNNPredVar: function (v){
-    var i =0;
-    while (i < uiState.knnList.length){
-      if (v == uiState.knnList[i].name) {
-        // console.log(uiState.knnList[i].marker.getPosition());
-        var p = uiState.knnList[i].marker.getPosition();
-        return {lat:p.lat(),lng:p.lng()};
-      }
-      i++;          
-    }
-    return null;
-  }
-};
+  function initializeMap() {
 
-    /**
-    flags
-    **/
+    var mapOptions = {
 
-    var queryvis = false;
-    var load200 = false;
-    var load800 = false;
-    ///////////////////
+        // US 
+        // 39.730255, -98.018183
+      		//24.507052, 45.371521
 
-    var gridx_scales = [1,1,1,1];
-    var hc = 5;
-    var vc = 5;
-
-var bolts = [];
-var LOD = 3;
-
-var grids = [];
-var grid = [];
-
-  var queries = [];
-      var inputpoints =[];
-      var trips =[];
-      var lines = [];
-
-      var eventsources = [];
-
-      var nodes = {};
-      var edges = {};
-      var nodeSet = [];
-
-    /////////////////
-   	var gmap = null;
-
-    var beforeColor = '#CF5656';
-    var afterColor = '#9BC150';
-
-    var polylines = [];
-
-    var drawingContext = {
-      rectangles:[],
-      rectangleMaxCount:1
-    };
-    var drawingManager = null;
-
-    var beforeRectOptions = {
-      clickable: true,
-      draggable:true,
-      editable:true,
-      fillColor: beforeColor, 
-      fillOpacity: 0.5,
-      strokeWeight: 5
-    };
-
-    // place holder object for the request
-    var request = {
-        mbr:null
+      		// berlin
+      		// 52.520190250694526&west=13.405380249023438&south=52.51914570999911&east=13.407440185546875 
+          // makkah : 22.473878, 40.121263
+        // center: new google.maps.LatLng(39.730255, -98.018183),
+        center: new google.maps.LatLng(0,0),
+        panControl:false,
+        zoomControl:false,
+        mapTypeControl:false,
+        streetViewControl:false,
+        // minZoom:10,
+        // maxZoom:10,
+        // draggable: false,
+        zoom: 4
       };
+      var map = new google.maps.Map(document.getElementById("map-canvas"),
+        mapOptions);
+      gmap = map;
 
+    }
 
-var es; // event stream handle
-
-    
-      function initializeMap() {
-
-        var mapOptions = {
-
-          // US 
-          // 39.730255, -98.018183
-        		//24.507052, 45.371521
-
-        		// berlin
-        		// 52.520190250694526&west=13.405380249023438&south=52.51914570999911&east=13.407440185546875 
-            // makkah : 22.473878, 40.121263
-          // center: new google.maps.LatLng(39.730255, -98.018183),
-          center: new google.maps.LatLng(0,0),
-          panControl:false,
-          zoomControl:false,
-          mapTypeControl:false,
-          streetViewControl:false,
-          minZoom:2,
-          maxZoom:2,
-          draggable: false,
-          zoom: 2
-        };
-        var map = new google.maps.Map(document.getElementById("map-canvas"),
-            mapOptions);
-        gmap = map;
-
-}
-
-var runningvis = {
-    timer:null,
-    uilines:[],
-    restart:true
-};
+    var runningvis = {
+      timer:null,
+      uilines:[],
+      restart:true
+    };
 // Doc load 
 $(document).ready(function() {
 
-initializeMap();
+  initializeMap();
 
-gmap.addListener("click",function(data){
-  console.log(data.latLng.lat());
-  console.log(typeof data);
-  var p = {};
-  p.lat = data.latLng.lat();
-  p.lng = data.latLng.lng();
+  gmap.addListener("click",function(data){
+    console.log(data.latLng.lat());
+    console.log(typeof data);
+    var p = {};
+    p.lat = data.latLng.lat();
+    p.lng = data.latLng.lng();
 
-  $.ajax( "hotspot", {
+    $.ajax( "hotspot", {
       method: "POST",
       data: $.toJSON(p),
       dataType: "json"
-  }).done(function(data){
+    }).done(function(data){
       console.log(data);
+    });
   });
-});
+
+  gmap.setZoom(10);
+  gmap.fitBounds(new google.maps.LatLngBounds(new google.maps.LatLng(20.0,-130.0),new google.maps.LatLng(50.0,-60.0)));
 
 
-$("#title").click(function(){
-    
-    if (runningvis.restart){
-        clearInterval(runningvis.timer);
-        
-        for (i in runningvis.uilines){
-            runningvis.uilines[i].setMap(null);
-        }
-        removeChild(bolts)
-        
-        var gran = getParameterByName("bolts");
-        var root = {};
-        root.parent = null;
-        root.cell = gmap;
-        root.lod = 1;
-        root.child = null;
-        bolts = buildGrid(root,"#0000FF", gran, gran, 1);
+// $("#title").click(function(){
 
-        var gmbr = createMBR(gmap);
-        var req = {
-            minX:gmbr.south,
-            minY:gmbr.west,
-            maxX:gmbr.east,
-            maxY:gmbr.north
-        };
+  if (runningvis.restart){
+    clearInterval(runningvis.timer);
 
-    //    drawMBR(gmbr,"#FF0000");
-
-        var urate = getParameterByName("urate");
-        //console.log(urate);
-        
-
-        runningvis.timer = setInterval(function(){
-
-          $.getJSON( "kafka/adaptiveIndex", gmbr,function( data ) {
-            console.log(data);
-          });
-
-          $.getJSON( "adaptiveIndex", gmbr,function( data ) {
-            // $.getJSON( "adaptive", gmbr,function( data ) { // AQWA old demo data
-    //        console.log($.toJSON(gmbr));
-             // console.log($.toJSON(data));
-    //        console.log(data[data.length-1]);
-            // if (data.length > 0){
-                // for (i in runningvis.uilines){
-                //     runningvis.uilines[i].setMap(null);
-                // }
-                while (runningvis.uilines.length > 0){
-                  runningvis.uilines.pop().setMap(null);
-                }
-
-            // }        
-            //gmap.fitBounds(new google.maps.LatLngBounds(new google.maps.LatLng(cmbr.south,cmbr.west), new google.maps.LatLng(cmbr.north,cmbr.east)));
-            for (i in data){
-             runningvis.uilines.push(drawMBR(data[i],data[i].color));          
-            }
-
-          });
-        }, urate);
-        
+    for (i in runningvis.uilines){
+      runningvis.uilines[i].setMap(null);
     }
-    
+
+    var urate = getParameterByName("urate");
+
+    runningvis.timer = setInterval(function(){
+
+          // $.getJSON( "kafka/adaptiveIndex", gmbr,function( data ) {
+          //   console.log(data);
+          // });
+
+    $.getJSON( "adaptiveIndex",function( data ) {
+      while (runningvis.uilines.length > 0){
+        runningvis.uilines.pop().setMap(null);
+      }
+
+      for (i in data){
+       runningvis.uilines.push(drawMBR(data[i],data[i].color));          
+     }
+
+   });
+  }, urate);
+
+  }
+
+// });
+
+
 });
-
-
-var gmapbounds;
 
 
 function buildRect(rcolor){
-    var viewMBr = createMBR(gmap);
-    var viewBounds = gmap.getBounds();
+  var viewMBr = createMBR(gmap);
+  var viewBounds = gmap.getBounds();
 }
 
-   		});
+    // place holder object for the request
+    var request = {
+      mbr:null
+    };
 
-      var markers = [];
-
-      function clearMap(){
-        while (drawingContext.rectangles.length > 0){
-          drawingContext.rectangles.pop().setMap(null);
-        }
-        drawingOptions.rectangleOptions = beforeRectOptions;
-        drawingManager.setOptions(drawingOptions);
-        drawingManager.setMap(gmap);
-
-        // remove all polylines
-
-        while (polylines.length > 0){
-          polylines.pop().setMap(null);
-        }
+    // This function creates the MBR (spatial predicate) for the query
+    function updateMBR(qid, rect){
+      // console.log(qid);
+      // console.log(uiState.rangeList[qid]);
+      console.log(createMBR(rect));
+      uiState.rangeList[qid].rect = rect;
+    }
 
 
-      }
-
-          // place holder object for the request
-        var request = {
-            mbr:null
-          };
-
-      // This function creates the MBR (spatial predicate) for the query
-      function updateMBR(qid, rect){
-        // console.log(qid);
-        // console.log(uiState.rangeList[qid]);
-        console.log(createMBR(rect));
-        uiState.rangeList[qid].rect = rect;
-      }
-
-      
     function createMBR(rect){
-        return {
-          north:rect.getBounds().getNorthEast().lat(),
-          east:rect.getBounds().getNorthEast().lng(),
-          south:rect.getBounds().getSouthWest().lat(),
-          west:rect.getBounds().getSouthWest().lng()
-        };
-      }
-
- function getParameterByName(name) {
-    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-        results = regex.exec(location.search);
-    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
-}
-
-function Overlaps(s1,e1,s2,e2){
-    if (s1 < s2 && e1 > s2) return true;
-    if (s1 < s2 && e1 > e2) return true;
-    if (s1 > s2 && s1 < e2) return true;
-    if (s1 > s2 && e1 < e2) return true;
-    
-    return false;    
-}
-
-function checkSplit(pgrid,qbounds){
-    
-    var split = getParameterByName("split");
-    var combine = getParameterByName("combine");
-    for(var i = 0; i < pgrid.length; i++){
-        for (var j = 0; j < pgrid[i].length; j++){
-           var cmbr = createMBR(pgrid[i][j].cell);
-           if (Overlaps(cmbr.south, cmbr.north, qbounds.south,qbounds.north)
-                   && Overlaps(cmbr.west,cmbr.east,qbounds.west,qbounds.east)){
-    //                            console.log("cbounds :"+$.toJSON(cmbr)); 
-                if (pgrid[i][j].child === null)
-                    buildGrid(pgrid[i][j],'#0000FF',split,split);
-    //                        console.log($.toJSON(bolts[i][j].child));
-            }
-            else{
-    //                        console.log("i= "+i+" , j = "+j);
-               removeChild(pgrid[i][j].child);
-    //                       buildGrid(bolts[i][j],'#00FF00',combine,combine);
-                pgrid[i][j].child = null;
-            }
-
-        }
-
-
+      return {
+        north:rect.getBounds().getNorthEast().lat(),
+        east:rect.getBounds().getNorthEast().lng(),
+        south:rect.getBounds().getSouthWest().lat(),
+        west:rect.getBounds().getSouthWest().lng()
+      };
     }
-}
 
-function removeChild(cgrid){ 
-    if (cgrid == null) {
-        return;
+    function getParameterByName(name) {
+      name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+      var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+      results = regex.exec(location.search);
+      return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
     }
-    else{
-        for (var i = 0; i < cgrid.length; i++) {
-            for (var j = 0, max = cgrid[i].length; j < max; j++) {
-                removeChild(cgrid[i][j].child);
-                cgrid[i][j].cell.setMap(null);
-                cgrid[i][j].cell = null;   
-            }    
-        }         
-    }
-    
-}
 
-function drawMBR(mbr, rcolor){
-    var cellbounds = new google.maps.LatLngBounds(
-      new google.maps.LatLng(mbr.south, mbr.west),
-      new google.maps.LatLng(mbr.north, mbr.east));
-     
-    var cell =  new google.maps.Rectangle({
+    function Overlaps(s1,e1,s2,e2){
+      if (s1 < s2 && e1 > s2) return true;
+      if (s1 < s2 && e1 > e2) return true;
+      if (s1 > s2 && s1 < e2) return true;
+      if (s1 > s2 && e1 < e2) return true;
+
+      return false;    
+    }
+
+    function drawMBR(mbr, rcolor){
+      var cellbounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(mbr.south, mbr.west),
+        new google.maps.LatLng(mbr.north, mbr.east));
+
+      var cell =  new google.maps.Rectangle({
         strokeColor: rcolor,
         strokeOpacity: 0.8,
         strokeWeight: 2,
 //        fillColor: rcolor,
-       fillOpacity: 0,
-        map: gmap,
-        bounds: cellbounds
-      });
+fillOpacity: 0,
+map: gmap,
+bounds: cellbounds
+});
       
       // designate a rectangle as hotspot
     // cell.addListener("click", function(){
@@ -376,222 +198,72 @@ function drawMBR(mbr, rcolor){
 
     // });
 
-      return cell;
+return cell;
+}
+</script>
+<style type="text/css">
+#map-canvas{
+  width:100%;
+  margin: auto;      
+
 }
 
-function buildGrid(parent, rcolor,_vc,_hc){
-    if (parent.lod < LOD){
-        var gmapbounds = parent.cell.getBounds();
-    var _grid = [];
-    for (var i = 0; i < _hc ; i++){
-      _grid.push([]);
-      for (var j = 0; j < _vc; j++) {
-        _grid[i].push({});
-      };
-
-    } 
-//    console.log("created grid with hc = "+_hc+" , and vc = "+_vc);
-//    var gmapMbr = createMBR(gmap);
-//    gmapbounds = gmap.getBounds();
-//    console.log(gmapMbr);
-// cell bounds
-var west = gmapbounds.getSouthWest().lng();
-var south = gmapbounds.getSouthWest().lat(); 
-var west_o = gmapbounds.getSouthWest().lng();
-var south_o = gmapbounds.getSouthWest().lat();
-var east = 0;
-var north = 0;
-
-var hrange = (gmapbounds.getNorthEast().lng()-gmapbounds.getSouthWest().lng())/_hc;
-var vrange = (gmapbounds.getNorthEast().lat()-gmapbounds.getSouthWest().lat())/_vc;
-
-//console.log("creating grid with hrange = "+hrange+", and vrange = "+vrange);
-
-
-if (rcolor === null)
- rcolor = randomColor({luminosity: 'light'});
- 
- 
-for (var i = _vc-1; i >=0; i--) {
-  
-  north = south + vrange;
-  west = west_o;
-  for (var j = 0; j < _hc; j++) {
-    east = west + hrange;
-    
-//    console.log("cell["+i+"]["+j+"]: north = "+north+", east = "+east+", south = "+south+", west = "+west);
-
-    var cellbounds = new google.maps.LatLngBounds(
-      new google.maps.LatLng(south, west),
-      new google.maps.LatLng(north, east));
-     
-    var cell =  new google.maps.Rectangle({
-        strokeColor: rcolor,
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: rcolor,
-        fillOpacity: 0.15,
-        map: gmap,
-        bounds: cellbounds
-      });
-//
-//    cell.addListener("click",function(){
-////        console.log("clicked, bounds = "+this.getBounds());
-//        var split = getParameterByName("split");
-//        _grid[i][j].child = buildGrid(this,'#0000FF',split,split,++lod);   
-//    });
-////    cell.addListener("rightclick",function(){
-////       
-////        this.setMap(null);
-////    });
-//    
-//    cell.addListener("rightclick",function(){
-//        var combine = getParameterByName("combine");
-//        _grid[i][j].child = buildGrid(this,'#00FF00',combine,combine,++lod);
-//        
-//    });
-//    var rect = createMBR(cell);
-//    console.log("rect:"+$.toJSON(rect)+" i "+i+" , j ="+j+" , gird"+_grid[i][j]);
-    _grid[i][j].parent = parent;
-    _grid[i][j].cell = cell;    
-    _grid[i][j].child = null;    
-    _grid[i][j].lod = parent.lod+1;
-    
-
-    west = east;    
-  }
-     
-  south = north;
+#controlpanel {
+  position:relative;width:100%;z-index:5;
+  /*background-color:#B3D1FF;*/
+  background-color: black;
+  display: block;
+  height: 6em;
+  /*overflow: scroll;*/
 }
 
-//grids.push(_grid);
-parent.child = _grid;
-return _grid;
-        
-    }   
-    else return null;
-    
-}      
-    </script>
-    <style type="text/css">
-    #map-canvas{
-      width:1024px;
-      margin: auto;      
-      
-    }
-    #controlpanel {
-      position:relative;width:100%;z-index:5;
-      /*background-color:#B3D1FF;*/
-      background-color: black;
-      display: block;
-      height: 6em;
-      /*overflow: scroll;*/
-    }
-    #side {
-      padding: 1em;
-      display: block;
-      width:14em;
-      /*width:24em;*/
-      height: 100%;
-      z-index: 5;
-      float: left;
-      display: none;
-    }
-    #logo{
-      display: block;
-      width: 14em;
-      height: 100%;
-      background-color: black;
-      float: left;
-    }
+#logo{
+  display: block;
+  width: 14em;
+  height: 100%;
+  background-color: black;
+  float: left;
+}
 
-    #logo img {
+#logo img {
 
-       width: 14em;
-       flaot:left;
-    }
+ width: 14em;
+ flaot:left;
+}
 
-     /* Styling code for display purposes */
-    .jsDump {
-        overflow: auto;
-        /*max-height: 20em;*/
-        margin: 0;
-        padding: .5em 1em;
-        border: 2px solid silver;
-        border-top: none;
-        background-color: #f0f0f0;
-        display: block;
-        font-family: monospace;
-        white-space: pre;
-        width:auto;
-    }
 
-    #buttonPanel {
-      float:left;
-      padding: 1em;
-      padding-bottom: 0em;  
-      padding-right: 0em;      
-    }
+.hidden {
+  display: none;
+}
 
-    #buttonPanel button {
-      width:10em;
-      height: 4em;
-    }
-    #textEntry {
-      float: left;
-      width:52em;
-      padding: 1em;
-      padding-bottom: 0em;
-    }
 
-    .hidden {
-      display: none;
-    }
+.title{
+  color:white;
+  font-family: fantasy;
+  font-size: -webkit-xxx-large;
+  top: 0.5em;
+  left: 2em;
+  position: relative;
+}
 
-    #buttonPanel span{
-      color: white;
+.page{
+  height: 100%;
+  /*padding-top: 0.5em;*/
+  background: #E5E3DF;
+}
+</style>
+</head>
+<body>
+ <div id="controlpanel" >
+  <div id="logo">
+    <img src="images/logo-pu.png">
+  </div>            
+  <div style="position:relative" id="clist"></div>
+  <span id="title" class="title">Tornado: Adaptive Index Visualization</span>
+</div>
+<div class="page">
+  <div id="map-canvas" style="z-index:0;"></div>
+</div>
 
-    }
-
-    .predicateList span {
-      
-    }
-    
-    .title{
-        color:white;
-        font-family: fantasy;
-        font-size: -webkit-xxx-large;
-        top: 0.5em;
-        left: 2em;
-        position: relative;
-    }
-    
-    .page{
-        height: 100%;
-        padding-top: 0.5em;
-        background: #E5E3DF;
-    }
-    </style>
-  </head>
-  <body>
-  	<div id="controlpanel" >
-    <div id="logo">
-      <img src="images/logo-pu.png">
-    </div>
-            
-                
-  	<div style="position:relative" id="clist"></div>
-        <span id="title" class="title">Tornado: Adaptive Index Visualization</span>
-	</div>
-      <div class="page">
-           <div id="side">
-    
-        <button id="showGrid">Show Grid</button>
-        <button id="showAdaptive">Show Adaptive</button>
-
-      </div>
-      <div id="map-canvas" style="z-index:0;"></div>
-      </div>
-
-  </body>
+</body>
 </html>

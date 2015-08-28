@@ -5,51 +5,120 @@ import spray.json.JsString
 import spray.json.JsNumber
 import kafka.serializer.StringDecoder
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.io.BufferedSource
+import scala.collection.mutable.PriorityQueue
+import spray.json.JsonParser
+import spray.json.JsArray
 
 object Playground {
+  
+  
   def main(args :Array[String]) : Unit = {
     
     // converts CSV to JSON
-    
+       
 //    val source = scala.io.Source.fromFile("data/sample_tweets.csv")
-//    source.getLines().foreach { x => {
-//      val arr = x.split(",")
-//      println(JsObject("point" -> JsObject("lat" -> JsNumber(arr(2)), "lng" -> JsNumber(arr(3))), "oid" -> JsString(arr(0)), "text" -> JsString(arr(5))).toString())
-//      
-//    } }
+    
+    
     
     ////////
     
     /// Kafka Consumer Testing
-    val zk = "localhost:2181"
-    val cgid = "g1"
-    val topic = "output"
+//    val zk = "localhost:2181"
+//    val cgid = "g1"
+//    val topic = "output"
+//    
+//    val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
+//    val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
+//    val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
+//
+//    val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
+//    val streams = consumerMap.get(topic)
+//    
+//    while (true) {
+//      val iter = streams.get(0).iterator()
+//      
+////      iter.foreach(x => {
+////        println("got a message: "+x.message())
+////      })
+//      
+//      if (iter.hasNext()) {
+//        val msg = iter.next.message()
+//        consumer.commitOffsets()
+//        println("got a message: "+msg)
+//      } 
+//      
+//      println("====================  after foreach")
+//      Thread.sleep(100)      
+//    }
     
-    val conf = KafkaConsumerHelper.createConsumerConfig(zk, cgid)
-    val consumer = kafka.consumer.Consumer.createJavaConsumerConnector(conf);
-    val topicCountMap = Map(topic -> 1.asInstanceOf[Integer]).asJava
-
-    val consumerMap = consumer.createMessageStreams(topicCountMap, new StringDecoder(), new StringDecoder())
-    val streams = consumerMap.get(topic)
+    // find max bounds
     
-    while (true) {
-      val iter = streams.get(0).iterator()
+    val source = scala.io.Source.fromFile("data/PartitionsJSON_LargDataFile.txt")
+    val arr = source.getLines().take(1).next()
+    val p = JsonParser(arr).asInstanceOf[JsArray];
+    println(p.elements(0))        
+  }
+  
+//  object KNNOrdering extends Ordering[(String,String)] {
+//    def compare(a:String, b:String) = {
+//      val a_arr = a.split(",")
+//      val b_arr = b.split(",")
+//      
+//    }
+//  }
+//  
+  def generateKnnTuples(source:BufferedSource) : Unit = {
+    val pq =   new PriorityQueue[String]()
+    
+  }
+  
+  def generateJoinedTuples(source:BufferedSource) : Unit = {
+    
+    // join tuple generation
+    val buffer = scala.collection.mutable.ArrayBuffer[String]()
+    val size = 10;
+    val dsize = 3
+    var i = 0
+    
+    source.getLines().foreach { x => {
+      if (i > 2 && buffer.size > 2) {
+        
+        
       
-//      iter.foreach(x => {
-//        println("got a message: "+x.message())
-//      })
+      val arr = x.split(",")
+      var arr2:Array[String] = null
+      if (i % size == 0){
+        buffer.drop(buffer.length / 2)       
+      }
+      else{
+//        println(buffer)
+        var in = scala.util.Random.nextInt(buffer.size)
+        arr2 = buffer(in).split(",")
+      }
+     
       
-      if (iter.hasNext()) {
-        val msg = iter.next.message()
-        consumer.commitOffsets()
-        println("got a message: "+msg)
-      } 
+      val qname= "q"+(scala.util.Random.nextInt(4)+1)      
+          
+      try {
+        val res = JsObject("point1" -> JsObject("lat" -> JsNumber(arr(2)), "lng" -> JsNumber(arr(3))),
+                         "point2" -> JsObject("lat" -> JsNumber(arr2(2)), "lng" -> JsNumber(arr2(3))),
+                         "oid1" -> JsString(arr(0)),
+                         "oid2" -> JsString(arr2(0)),
+                         "text1" -> JsString(arr(5)),
+                         "text2" -> JsString(arr2(5)),
+                         "tag" -> JsString("+"),
+                         "name" -> JsString(qname))
+        println(res.toString())
+      }
+      catch {
+        case _ => {}
+      }
+      }
+      buffer += x
+      i = i + 1
       
-      println("====================  after foreach")
-      Thread.sleep(100)      
-    }
-    
-    
+    } }
     
   }
 }

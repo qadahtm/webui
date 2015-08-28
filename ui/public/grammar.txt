@@ -19,10 +19,10 @@ where s1.rid = "r1" and s2.roomTemp = 3;
 
 {
 // Need to comment in production
-var uiState = {
-resolveRangePredVar: function(){return null;},
-resolveKNNPredVar:function(){return null;}
-};
+//var uiState = {
+//resolveRangePredVar: function(){return null;},
+//resolveKNNPredVar:function(){return null;}
+//};
 
    
 
@@ -30,21 +30,27 @@ resolveKNNPredVar:function(){return null;}
 //      console.log(uiState);
       console.log(t);
       console.log(v);
-
+     var res = null;
 
      if (t == "KNN"){
       //console.log(uiState.resolveKNNPredVar(v));
-      if (uiState == undefined) return null;
+      //if (uiState == undefined) return null;
 
-      return uiState.resolveKNNPredVar(v);
+      res = uiState.resolveKNNPredVar(v);
      } 
-     else if (t == "inRange"){        
-        return uiState.resolveRangePredVar(v);
+     else if (t == "inRange"){ 
+        res = uiState.resolveRangePredVar(v);        
      }
      else if (t == "INSIDE"){      
-      return uiState.resolveRangePredVar(v);
+      res = uiState.resolveRangePredVar(v);
      }
-     else return null;
+
+     if (res === null) {
+      error("cannot resolve argument variable: "+v)      
+        
+     }
+     return res;
+
    }   
 
 }

@@ -1,7 +1,9 @@
 # Web Front-end for Tornado
-Paper: 
+## Paper: 
 Tornado: A Distributed Spatio-Textual Stream Processing System
 Ahmed Mahmood (Purdue University), Ahmed Aly (Purdue University), Thamir Qadah (Purdue University), El Kindi Rezig (Purdue University), Anas Daghistani (Purdue University), Amgad Madkour (Purdue University), Ahmed Abdelhamid (Purdue University), Mohamed Hassan (Purdue University), Walid Aref (Purdue University (USA), Saleh Basalamah (Umm Al-Qura University)
+
+### Please cite our paper if you used this code.
 
 ## Build from Souce
 ### Mac/Linux

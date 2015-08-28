@@ -23,8 +23,9 @@ var uiState = {
     catalog:{
         queries:{
             liststate:[],
-            keys:[],
-            vals:[],
+            // keys:[],
+            // vals:[],
+            list:{},
             poller:null
         },
         datasources:{
@@ -106,8 +107,8 @@ var beforeRectOptions = {
     clickable: true,
     draggable: true,
     editable: true,
-    fillColor: beforeColor,
-    fillOpacity: 0.5,
+    // fillColor: beforeColor,
+    fillOpacity: 0,
     strokeWeight: 5
 };
 
@@ -194,94 +195,109 @@ function initialize() {
             }
 
             // lookup query current state
-            var qi;
+            var qo;
 
             if (sse.name === undefined){
-                qi = uiState.catalog.queries.keys.indexOf(sse.qname);
+                qo = uiState.catalog.queries.list[sse.qname];
             }
             else {
-                qi = uiState.catalog.queries.keys.indexOf(sse.name);
+                qo = uiState.catalog.queries.list[sse.name];
             }
 
-
             // console.log(qi);
-
-            if (qi !== -1){
-                var qo = uiState.catalog.queries.vals[qi];
-                // console.log(qo);
-
-                var iconUrl = createColoredMarker(qo.outputColor);
-                // console.log(iconUrl);
-                // create map element
-                var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);
-                var marker1 = new google.maps.Marker({
-                      position: myLatlng1,
-                      icon: iconUrl,
-                      title:sse.text
-                  });
-                var infowindow1 = new google.maps.InfoWindow({
-                      content: "<p>"+sse.text+"</p>"
-                  });
-                google.maps.event.addListener(marker1,'click',function(){
-                    infowindow1.open(gmap,marker1);                
-                 });
-
-                // create list element
-
-                // hide empty message
-                var outputlisting = $("#outputlisting");
-
-                var iconElem = $("<img src='"+iconUrl+"' />");
-                var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
-                var textCol = $("<p class='col-md-8' style='overflow-x:scroll;'>"+sse.text+"</p>");
-                var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
-                var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
-                // listitem.data("query", sse.name);
-
-                if (qo.checked === "check"){
-                    marker1.setMap(gmap);                    
-                }
-                else{
-                    listitem.toggleClass("hidden");
-                }
-                
-                outputlisting.append( listitem );
-
-                if (!qo.output){
-                    qo.output = [];
-                }
-                var outputEntry = {};
-                outputEntry.mapElement = marker1;
-                outputEntry.listElement = listitem;
+            // check for first output
+            // if (qo.output === undefined){
+            //     // first output
+            //     qo.output = [];
+            // }
 
             
-                qo.output.push(outputEntry);
+            if (qo !== undefined){
+
+                if (qo.outputObjects === undefined){
+                    qo.outputObjects = {};
+                }
+
+                if (sse.oid !== undefined){
+                    // single tuple
+                    //console.log(qo.outputObjects[sse.oid]);
+                    if (sse.tag !== undefined){
+                        if (sse.tag === "+"){
+                            addOutputObject(sse, qo);
+                        }
+                        else if (sse.tag === "-"){
+                            deleteOutputObject(qo,sse.oid);                        
+                        }
+                        else if (sse.tag === "u"){
+                            if (qo.outputObjects[sse.oid] === undefined){
+                                console.log("WARN : u for oid that does not exist in state");
+                                addOutputObject(sse, qo); 
+                            }
+                            else {                                
+                                deleteOutputObject(sse, qo);
+                                addOutputObject(sse, qo); 
+                            }
+                        }
+                    }
+                    else {
+                        //do nothing
+                    }
+                    
+                }
+                else if (sse.oid1 !== undefined && sse.oid2 !== undefined){
+                    // joined tuple
+
+                    if (sse.tag !== undefined){
+                        if (sse.tag === "+"){
+                            addOutputObjectPair(sse, qo);
+                        }
+                        else if (sse.tag === "-"){
+                            deleteOutputObjectPair(sse, qo);                        
+                        }
+                        else if (sse.tag === "u"){
+                            if (qo.outputObjects[sse.oid1] === undefined || qo.outputObjects[sse.oid2] === undefined){
+                                console.log("WARN : u for oid1 and oidt that do not exist in state");
+                                addOutputObjectPair(sse, qo);
+                            }
+                            else {                                
+                                deleteOutputObject(sse, qo);
+                                addOutputObject(sse, qo); 
+                            }
+                        }
+                    }
+                    else {
+                        //do nothing
+                    }
+                }
+                // store output elements
+                //qo.output.push(outputEntry);
+
 
                 refreshOutputListing();
 
             }
-
+            else {
+                console.log("WARN: query object is not defined : " + sse.name);
+            }
 
 
         }
     }
     });
-    
-
-    
-
-    
-
+                       
     var mapOptions = {
         // US 
         // 39.730255, -98.018183
         //24.507052, 45.371521
+        // center : 39.338734, -100.058701
 
         // berlin
         // 52.520190250694526&west=13.405380249023438&south=52.51914570999911&east=13.407440185546875 
         // makkah : 22.473878, 40.121263
-        center: new google.maps.LatLng(39.730255, -98.018183),
-        zoom: 5
+        //center: new google.maps.LatLng(39.730255, -98.018183),
+        //usCenter
+        center: new google.maps.LatLng(39.338734, -100.058701),
+        zoom: 4
     };
     var map = new google.maps.Map(document.getElementById("map-canvas"),
             mapOptions);
@@ -301,8 +317,8 @@ function initialize() {
             uiState.knnList.push({show: true, name: "f" + qid, marker: m, color: _color, iconUrl: _iconUrl});
 
             var nopt = {
-                      icon: _iconUrl
-                  };
+                icon: _iconUrl
+            };
 
             //console.log(m);
             m.setOptions(nopt);
@@ -399,7 +415,206 @@ function buildErrorMessage(e) {
       : e.message;
 }
 
+function addOutputObject(sse, qo){
+    var outobj = qo.outputObjects[sse.oid];
+    var iconUrl = createColoredMarker(qo.outputColor);
+    var outputEntry = {};
+    var outputlisting = $("#outputlisting");
 
+    if ( outobj === undefined){
+        // TODO: utilize tags
+        // check if object is already displayed
+
+        // create map element
+        var myLatlng1 = new google.maps.LatLng(sse.point.lat,sse.point.lng);
+        var marker1 = new google.maps.Marker({
+              position: myLatlng1,
+              icon: iconUrl,
+              title:sse.text
+          });
+        var infowindow1 = new google.maps.InfoWindow({
+              content: "<p>"+sse.text+"</p>"
+          });
+        google.maps.event.addListener(marker1,'click',function(){
+            infowindow1.open(gmap,marker1);                
+         });
+
+        // create list element
+
+        var listitem = createOutputTupleListEntry(sse,qo);
+
+        if (qo.checked === "check"){
+            marker1.setMap(gmap);                    
+        }
+        else{
+            listitem.toggleClass("hidden");
+        }
+        
+        outputlisting.append( listitem );
+
+        // if (!qo.output){
+        //     qo.output = [];
+        // }
+        
+        outputEntry.mapElement = marker1;
+        outputEntry.listElement = listitem;   
+        outputEntry.queryObject = qo;
+
+        qo.outputObjects[sse.oid] = outputEntry; 
+
+
+        refreshOutputListing();
+    }
+    else{
+        console.log("warning : + for oid that already exist in state");
+    }
+
+}
+
+function addOutputObjectPair(sse, qo){
+
+    // create either one that does not exist otherwise create both. No listing required
+
+    var outobj1 = qo.outputObjects[sse.oid1];
+    var outobj2 = qo.outputObjects[sse.oid2];
+
+    var iconUrl = createColoredMarker(qo.outputColor);
+    var outputlisting = $("#outputlisting");
+
+    if ( outobj1 === undefined && outobj2 === undefined){
+        // both objects are new
+        // console.log(sse);
+
+        var listitem = createJoinOutputTupleListEntry(sse,qo);
+
+        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1.join(" ")),
+                                            createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2.join(" ")),
+                                            listitem);
+
+        // display elements
+        displayJoinedTuple(sse, qo,toe, listitem);
+
+    }
+    else if (outobj1 !== undefined && outobj2 === undefined){
+        
+        var listitem = createJoinOutputTupleListEntry(sse,qo);
+
+        var toe = joinTwoOutputEntries(sse, outobj1,
+                                    createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2.join(" ")),
+                                    listitem);
+
+        displayJoinedTuple(sse, qo,toe, listitem);        
+
+    }
+    else if (outobj1 === undefined && outobj2 !== undefined){
+
+        var listitem = createJoinOutputTupleListEntry(sse,qo);
+
+        // var toe = joinTwoOutputEntries(sse, createOutputEntry(sse,qo), outobj2,listitem);
+        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1.join(" ")),
+                                        outobj1,                
+                                        listitem);
+        displayJoinedTuple(sse, qo,toe, listitem);       
+    }
+    else{
+        console.log("warning : adding request for objects that already exist in state");
+    }
+
+}
+
+function displayJoinedTuple(sse, qo, arr, listitem){
+
+    var outputEntry1 = arr[0];
+    var outputEntry2 = arr[1];
+
+    // display markers on map
+    if (qo.checked === "check"){       
+        outputEntry1.mapElement.setMap(gmap);
+        outputEntry2.mapElement.setMap(gmap);
+        outputEntry1.joinLine[sse.oid2].setMap(gmap);
+    }
+    else {
+        listitem.toggleClass("hidden");
+    }
+
+    // append list entry
+    $('#outputlisting').append(listitem);
+
+}
+
+function deleteOutputObject(sse,qo) {
+
+    var outobj = qo.outputObjects[sse.oid];
+    if (outobj === undefined){
+        console.log("warning : deleting oid(s) that DO NOT exist in state");
+    }
+    else {
+        if (qo.checked === "check"){
+            // object is displayed, remove from display first
+            outobj.mapElement.setMap(null);
+            outobj.listElement.remove();
+        }
+
+        delete qo.outputObjects[oid];
+    }
+}
+
+function deleteOutputObjectPair(sse,qo) {
+
+    var outobj1 = qo.outputObjects[sse.oid1];
+    var outobj2 = qo.outputObjects[sse.oid2];
+
+    if (outobj1 === undefined && outobj2 === undefined){
+        // nothing to do
+        console.log("warning : deleting oid(s) that DO NOT exist in state");
+    }
+    else if (outobj1 !== undefined && outobj2 === undefined){
+        if (qo.checked === "check"){
+            // object is displayed, remove from display first
+            outobj1.mapElement.setMap(null);
+            outobj1.listPair[sse.oid2].remove();
+            outobj1.joinLine[sse.oid2].setMap(null);
+            delete outobj1.joinLine[sse.oid2];
+            delete outobj1.listPair[sse.oid2];
+        }
+
+        delete qo.outputObjects[oid1];
+
+    }
+    else if (outobj1 === undefined && outobj2 !== undefined){
+        if (qo.checked === "check"){
+            // object is displayed, remove from display first
+            outobj2.mapElement.setMap(null);
+            outobj2.listPair[sse.oid1].remove();
+            outobj2.joinLine[sse.oid1].setMap(null);
+            delete outobj2.joinLine[sse.oid1];
+            delete outobj2.listPair[sse.oid1];
+
+        }
+
+        delete qo.outputObjects[oid2];
+    }
+    else {
+        if (qo.checked === "check"){
+            // object is displayed, remove from display first
+            outobj1.mapElement.setMap(null);
+            outobj1.listPair[sse.oid2].remove();
+            outobj2.mapElement.setMap(null);
+            outobj2.listPair[sse.oid1].remove();
+            outobj1.joinLine[sse.oid2].setMap(null);
+            outobj2.joinLine[sse.oid1].setMap(null);
+
+            delete outobj1.joinLine[sse.oid2];
+            delete outobj2.joinLine[sse.oid1];
+
+            delete outobj2.listPair[sse.oid1];
+            delete outobj1.listPair[sse.oid2];
+        }
+
+        delete qo.outputObjects[oid1];
+        delete qo.outputObjects[oid2];
+    }
+}
 
 function refreshOutputListing(){
     var outputlisting = $("#outputlisting");
@@ -424,51 +639,112 @@ function createPredicateListEntry(pobj) {
     
     var colorIcon = $('<span class="glyphicon glyphicon-stop" style="float:left;margin-right:0.6em;color:'+cqobj.color+'"></span>');
     var removeIcon = $('<span class="glyphicon glyphicon-trash" style="float:left;margin-right:0.6em;color:black"></span>');
-    // removeIcon.click(function(){
-    //     $.ajax("tornado/queries",{
-    //         method: "DELETE",
-    //         data: $.toJSON(djo)
-    //     }).done(function(resp){
-    //         // console.log(resp);
-    //         syslogAddStatus(resp);
-    //         var dqi = uiState.catalog.queries.keys.indexOf(djo.name);
-    //         var dqo = uiState.catalog.queries.vals[dqi];
-    //         for (var i = dqo.output.length - 1; i >= 0; i--) {
-    //             dqo.output[i].mapElement.setMap(null);
-    //             // console.log(dqo.output[i].listElement);
-    //             dqo.output[i].listElement.remove();
-    //         };
-    //         uiState.catalog.queries.keys.splice(dqi,1);
-    //         uiState.catalog.queries.vals.splice(dqi,1);
-    //         refreshRegiesteredQueryList();
-    //         refreshOutputListing();
-    //     });
-    // });
-
     var pname = $('<p>'+pobj.name+'</p>');
-
-    return $('<li class="list-group-item"></li>').append(colorIcon).append(removeIcon).append(pname);
+    var res = $('<li class="list-group-item"></li>').append(colorIcon).append(removeIcon).append(pname);
+    removeIcon.click(function(){
+        // TODO: remove predicate
+    });
+    return res;
 }
 
+function createOutputEntry(qo,oid,lat,lng,textv){
+    var iconUrl = createColoredMarker(qo.outputColor);
+    var myLatlng1 = new google.maps.LatLng(lat,lng);
+    var marker1 = new google.maps.Marker({
+          position: myLatlng1,
+          icon: iconUrl,
+          title:textv
+      });
+    var infowindow1 = new google.maps.InfoWindow({
+          content: "<p>"+textv+"</p>"
+      });
+    google.maps.event.addListener(marker1,'click',function(){
+        infowindow1.open(gmap,marker1);                
+     });
+
+     var outputEntry1 = {};
+    // outputEntry1.joinLine = {};
+    outputEntry1.listPair = {};
+    outputEntry1.joinLine = {};
+    outputEntry1.mapElement = marker1;
+    //outputEntry1.listPair[sse.oid2] = listitem; 
+    // console.log(qo);
+    outputEntry1.queryObject = qo;
+    qo.outputObjects[oid] = outputEntry1;
+    return outputEntry1;
+}
+
+
+function joinTwoOutputEntries (sse, ot1,ot2, listitem) {
+    
+    // create join line
+    var joinLine_coor = [
+        ot1.mapElement.getPosition(),
+        ot2.mapElement.getPosition()
+    ];
+
+    // console.log(joinLine_coor);
+    
+    var joinLine = new google.maps.Polyline({
+        path: joinLine_coor,
+        geodesic: true,
+        strokeColor: '#000000',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+      });
+
+    ot1.joinLine[sse.oid2] = joinLine;
+    ot2.joinLine[sse.oid1] = joinLine;
+
+    ot1.listPair[sse.oid2] = listitem;
+    ot2.listPair[sse.oid1] = listitem;
+
+    return [ot1,ot2];
+}
+
+function createOutputTupleListEntry(sse,qo){
+    var iconUrl = createColoredMarker(qo.outputColor);
+    var iconElem = $("<img src='"+iconUrl+"' />");
+    iconElem.click(function(){
+        gmap.panTo(new google.maps.LatLng(sse.point.lat,sse.point.lng));
+        gmap.setZoom(10);
+    });
+    var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
+    var textCol = $("<p class='col-md-8' style='word-wrap:break-word;overflow-x:scroll;'>"+sse.text+"</p>");
+    var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
+    var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+
+    return listitem;
+}
+
+function createJoinOutputTupleListEntry(sse,qo){
+    var iconUrl = createColoredMarker(qo.outputColor);
+    var iconElem1 = $("<img src='"+iconUrl+"' />");
+    iconElem1.click(function(){
+        gmap.panTo(new google.maps.LatLng(sse.point1.lat,sse.point1.lng));
+        gmap.setZoom(10);
+    });
+    var iconElem2 = $("<img src='"+iconUrl+"' />");
+    iconElem2.click(function(){
+        gmap.panTo(new google.maps.LatLng(sse.point2.lat,sse.point2.lng));
+        gmap.setZoom(10);
+    });
+    var iconElemJoin = $("<svg style='margin-left:3px;' height='14' width='14'><path d='M 0,0 L 0,0 14,14 L 14,14 14,0 L 14,0 0,14 L 0,14 0,0  Z' /></svg>");
+    var iconCol = $("<span class='col-md-2'></span>").append(iconElem1).append(iconElemJoin).append(iconElem2);
+    var textCol1 = $("<p class='col-md-8' style='word-wrap:break-word; overflow-x:scroll;'>"+sse.text1+"</p>");
+    var textCol2 = $("<p class='col-md-8' style='word-wrap:break-word;overflow-x:scroll;'>"+sse.text2+"</p>");
+    var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol1).append(textCol2);
+    var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+
+    return listitem;
+}
 
 
 function createQueryListEntry(qobj){
     var cqobj = qobj;
-    if (typeof qobj === "number"){
-        cqobj = uiState.catalog.queries.vals[qobj] 
-    }
-
-    // console.log(cqobj);
     var djo = {};
-
-
-    if (cqobj.qname){
-        djo.name = cqobj.qname;    
-    }
-    else if (cqobj.name) {
-        djo.name = cqobj.name;
-    }
-
+    djo.name = cqobj.name;
+    
     // add tag for deletion
     djo.tag = "-";
     var colorIcon = $('<span class="glyphicon glyphicon-stop" style="float:left;margin-right:0.6em;color:'+cqobj.outputColor+'"></span>');
@@ -480,15 +756,33 @@ function createQueryListEntry(qobj){
         }).done(function(resp){
             // console.log(resp);
             syslogAddStatus(resp);
-            var dqi = uiState.catalog.queries.keys.indexOf(djo.name);
-            var dqo = uiState.catalog.queries.vals[dqi];
-            for (var i = dqo.output.length - 1; i >= 0; i--) {
-                dqo.output[i].mapElement.setMap(null);
-                // console.log(dqo.output[i].listElement);
-                dqo.output[i].listElement.remove();
-            };
-            uiState.catalog.queries.keys.splice(dqi,1);
-            uiState.catalog.queries.vals.splice(dqi,1);
+
+            var dqo = uiState.catalog.queries.list[djo.name];
+
+            for (i in dqo.outputObjects){
+                var oe = dqo.outputObjects[i];
+                // console.log(oe);
+
+                oe.mapElement.setMap(null);
+                if (oe.listElement !== undefined){
+                    oe.listElement.remove();    
+                }
+                
+                for (k in oe.listPair){
+                    // console.log("deleting "+$.toJSON(oe.listPair[k]));
+                    oe.listPair[k].remove();
+                }
+
+                if (oe.joinLine !== undefined){
+                    var lines = oe.joinLine;
+                    for (j in lines) {
+                        lines[j].setMap(null);
+                    }
+                }
+
+            }
+
+            delete uiState.catalog.queries.list[djo.name];
             refreshRegiesteredQueryList();
             refreshOutputListing();
         });
@@ -506,21 +800,61 @@ function createQueryListEntry(qobj){
             // update state
             cqobj.checked = "unchecked";
             // console.log("remove all output for "+djo.name+" from display");
-            // var qi = uiState.catalog.queries.keys.indexOf(djo.name);  
-            // var qo = uiState.catalog.queries.vals[qi];
-            for (var i = cqobj.output.length - 1; i >= 0; i--) {
-              cqobj.output[i].mapElement.setMap(null);
-              $(cqobj.output[i].listElement).toggleClass("hidden");
+
+            for (i in cqobj.outputObjects) {
+                // hide marker from display
+              cqobj.outputObjects[i].mapElement.setMap(null);
+
+              // hide lines from display if applicable
+              if (cqobj.outputObjects[i].joinLine !== undefined) {
+                var lines = cqobj.outputObjects[i].joinLine;
+                for (j in lines) {
+                    lines[j].setMap(null);
+                }
+              }
+
+              // hide list entries from display if applicable
+              $(cqobj.outputObjects[i].listElement).toggleClass("hidden");
+
+              if (cqobj.outputObjects[i].listPair !== undefined) {
+                var listelemPairs = cqobj.outputObjects[i].listPair;
+
+                for (j in listelemPairs){
+                    if (!listelemPairs[j].is(".hidden")){
+                        listelemPairs[j].addClass("hidden");        
+                    }   
+                }
+              }
             };         
 
         }
         else if (displayIcon.is(".glyphicon-check")){
             cqobj.checked = "check";
-            for (var i = cqobj.output.length - 1; i >= 0; i--) {
-              cqobj.output[i].mapElement.setMap(gmap);             
-              $(cqobj.output[i].listElement).toggleClass("hidden"); 
+            for (i in cqobj.outputObjects) {
+              cqobj.outputObjects[i].mapElement.setMap(gmap);   
+              if (cqobj.outputObjects[i].joinLine !== undefined) {
+                var lines = cqobj.outputObjects[i].joinLine;
+                for (j in lines) {
+                    lines[j].setMap(gmap);
+                }
+              }          
+              $(cqobj.outputObjects[i].listElement).toggleClass("hidden");
+
+              //console.log("list element : "+cqobj.outputObjects[i].listElement.html);
+              if (cqobj.outputObjects[i].listPair !== undefined) {
+                var listelemPairs = cqobj.outputObjects[i].listPair;
+                
+                for (j in listelemPairs){
+                    //console.log("hiding on check "+$listelemPairs[j].html());
+                    if (listelemPairs[j].is(".hidden")){
+                        listelemPairs[j].removeClass("hidden");    
+                    }
+                    
+                }
+              }
             };              
-        }        
+        }
+
     });
 
     return $('<li class="list-group-item qdata"></li>').append(colorIcon).append(removeIcon).append(displayIcon).append(qname).append(sqltextwell);
@@ -538,18 +872,29 @@ function refreshRegiesteredQueryList(){
             if (data.length > 0) {
 
                 // cache data
-                // new queries registered
+                // check for new queries registered
+
                 for (var i = data.length - 1; i >= 0; i--) {
-                    var qi = uiState.catalog.queries.keys.indexOf(data[i].name);
-                    if (qi === -1){
-                       // new query update client state
-                       qi = uiState.catalog.queries.keys.push(data[i].name) -1;    
-                       var nqo = data[i];
-                       nqo.checked = "check";
-                       nqo.output = [];
-                       console.log(nqo);
-                       uiState.catalog.queries.vals.push(nqo); 
-                    }                    
+                    if (uiState.catalog.queries.list[data[i].name] === undefined){
+                        // new query 
+                        var nqo = data[i];
+                        nqo.checked = "check";
+                        nqo.output = [];
+                        uiState.catalog.queries.list[nqo.name] = nqo; 
+                    }
+
+                    // var qi = uiState.catalog.queries.keys.indexOf(data[i].name);
+                    // if (qi === -1){
+                    //    // new query update client state
+                    //    qi = uiState.catalog.queries.keys.push(data[i].name) -1;    
+                    //    var nqo = data[i];
+                    //    nqo.checked = "check";
+                    //    nqo.output = [];
+                    //    //console.log(nqo);
+                    //    uiState.catalog.queries.vals.push(nqo); 
+                    //    uiState.catalog.queries.list[nqo.name] = nqo;
+                    //    //console.log(uiState.catalog.queries.list[nqo.name]);
+                    // }                    
                 };
                     //uiState.catalog.queries.liststate = data;
                     //console.log("here?");            
@@ -559,11 +904,18 @@ function refreshRegiesteredQueryList(){
 
                     if (qlist.find("li").length != data.length) {
                         qlist.empty();
-                        for (var i = 0; i < uiState.catalog.queries.vals.length; i++) {
+
+                        // for (var i = 0; i < uiState.catalog.queries.vals.length; i++) {
                              // console.log(data[i]);
                              // console.log(data[i].outputColor);
-                            qlist.append(createQueryListEntry(i));
-                        };
+                            // qlist.append(createQueryListEntry(i));
+                        // };
+
+                        for (q in uiState.catalog.queries.list) {
+                            // console.log(q + " : "+ $.toJSON(uiState.catalog.queries.list[q]));
+                            qlist.append(createQueryListEntry(uiState.catalog.queries.list[q]));
+
+                        }
                     }            
             }
             else{
@@ -645,29 +997,37 @@ $(document).ready(function () {
 
     $('#submitSQL').click(function () {
         var ast = syncSQLparse(uiState.parser);
-        var gmapView = createMBR(gmap);
-        // console.log($.toJSON(gmapView));
+        if (ast !== null){
+            var gmapView = createMBR(gmap);
+            // console.log($.toJSON(gmapView));
 
-        // add current view
-        ast.currentView = gmapView;
+            // add current view
+            ast.currentView = gmapView;
 
-        // add color 
-        ast.outputColor = uiState.getRandomColor();
-        console.log(ast.outputColor);
+            // add color 
+            ast.outputColor = uiState.getRandomColor();
+            //console.log(ast.outputColor);
 
-        //optimizeQueryPlan(ast.plan);
+            //optimizeQueryPlan(ast.plan);
 
-        // post query submitted query to server
-        $.ajax( "tornado/queries", {
-            method: "POST",
-            data: $.toJSON(ast),
-            dataType: "json"
-        }).done(function(data){
-            //console.log(data);
-            // syslogAddStatus(data);
-            updateRegisteredQueries(ast,data);
+            // post query submitted query to server
+            $.ajax( "tornado/queries", {
+                method: "POST",
+                data: $.toJSON(ast),
+                dataType: "json"
+            }).done(function(data){
+                //console.log(data);
+                // syslogAddStatus(data);
+                updateRegisteredQueries(ast,data);
 
-        });
+            });
+
+        }
+        else {
+            // parse error
+
+        }
+        
     });
 
     // Intialize google maps
@@ -737,6 +1097,7 @@ $(document).ready(function () {
     }
 
     function syncSQLparse(_parser) {
+        $("#pmsg").removeClass("alert-success alert-info alert-warning alert-danger");
         try {
             
             // var sqltext = $("#textData").val().trim();
@@ -750,14 +1111,18 @@ $(document).ready(function () {
             // var plan = pres.plan;
 //                        plan = optimizeQueryPlan(plan);
             // visualizeQueryPlan(plan);
-            
+            $("#pmsg").addClass("alert-success");
+            $("#pmsg").text("Query submitted successfully.");
             return pres;
         } catch (err) {
             //$('#prettyPrint').text(jsDump.parse(err));
             var errmsg = buildErrorMessage(err);
             var msge = $("<div class='panel panel-primary'>"+errmsg+"</div>");
             $("#syslog").append(msge);
-            console.log($.toJSON(err));
+            //console.log($.toJSON(err));
+            
+            $("#pmsg").addClass("alert-danger");
+            $("#pmsg").text(errmsg);
             return null;
         }
     }
@@ -980,8 +1345,8 @@ function getDemoData(){
     var skydeck = $.parseJSON('{"lng":-87.6358852,"tags":[{"k":"name","v":"SkyDeck Chicago"},{"k":"operator","v":"Willis Tower"},{"k":"tourism","v":"attraction"}],"ts":"2015-03-19T19:48:41Z","nid":"2311635030","lat":41.8786383}');
     console.log(skydeck.lng);
     console.log(skydeck.lat);
-    gmap.setCenter({lat: 41.8786383, lng: -87.6358852});
-    gmap.setZoom(14);
+    //gmap.setCenter({lat: 41.8786383, lng: -87.6358852});
+    //gmap.setZoom(14);
 }
 
 function optimizeQueryPlan(plan){
