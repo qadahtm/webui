@@ -193,7 +193,7 @@ WHERE OVERLAPS(T.text,"food")
 and INSIDE(T.loc,@r0);
       </div>
       <div id="rjq2r0">REGISTER QUERY rjq AS
-SELECT * FROM OSM_Data AS O, Tweets AS T
+SELECT * FROM POI_Data AS O, Tweets AS T
 WHERE WITHIN_DISTANCE(O.loc,T.loc,10)
 and INSIDE(T.loc,@r0)
 and OVERLAPS(O.text, T.text)
@@ -204,7 +204,7 @@ WHERE OVERLAPS(T.text,"food")
 and KNN(T.loc,@f0,10);
       </div>
       <div id="knnjq">REGISTER QUERY knnjq AS
-SELECT * FROM OSM_Data AS O, Tweets AS T
+SELECT * FROM POI_Data AS O, Tweets AS T
 WHERE KNN(O.loc,T.loc,10)
 and OVERLAPS(O.text, T.text)
 and CONTAINS(T.text, "love");
