@@ -165,8 +165,8 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       get {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
           JsArray(JsObject("sourceName" -> JsString("Tweets")),
-            JsObject("sourceName" -> JsString("OSM_Data")),
-            JsObject("sourceName" -> JsString("BerlinMOD"))).toString)))
+            JsObject("sourceName" -> JsString("POI_Data")),
+            JsObject("sourceName" -> JsString("MovingObjects"))).toString)))
       }
     }
   }

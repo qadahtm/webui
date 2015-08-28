@@ -487,8 +487,8 @@ function addOutputObjectPair(sse, qo){
 
         var listitem = createJoinOutputTupleListEntry(sse,qo);
 
-        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1.join(" ")),
-                                            createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2.join(" ")),
+        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1),
+                                            createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2),
                                             listitem);
 
         // display elements
@@ -500,7 +500,7 @@ function addOutputObjectPair(sse, qo){
         var listitem = createJoinOutputTupleListEntry(sse,qo);
 
         var toe = joinTwoOutputEntries(sse, outobj1,
-                                    createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2.join(" ")),
+                                    createOutputEntry(qo,sse.oid2,sse.point2.lat,sse.point2.lng,sse.text2),
                                     listitem);
 
         displayJoinedTuple(sse, qo,toe, listitem);        
@@ -511,7 +511,7 @@ function addOutputObjectPair(sse, qo){
         var listitem = createJoinOutputTupleListEntry(sse,qo);
 
         // var toe = joinTwoOutputEntries(sse, createOutputEntry(sse,qo), outobj2,listitem);
-        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1.join(" ")),
+        var toe = joinTwoOutputEntries(sse, createOutputEntry(qo,sse.oid1,sse.point1.lat,sse.point1.lng,sse.text1),
                                         outobj1,                
                                         listitem);
         displayJoinedTuple(sse, qo,toe, listitem);       
