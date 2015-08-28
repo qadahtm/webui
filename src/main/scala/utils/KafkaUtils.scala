@@ -101,7 +101,7 @@ object KafkaFileProducer {
     var tuples = Source.fromFile(Helper.getConfig().getString("kafka.test.producer.datafile")).getLines()
     
     
-    asystem.scheduler.schedule(Duration.create(0, TimeUnit.SECONDS) , Duration.create(Helper.getConfig().getInt("kafka.test.producer.rate"), TimeUnit.SECONDS)) {
+    asystem.scheduler.schedule(Duration.create(0, TimeUnit.SECONDS) , Duration.create(Helper.getConfig().getInt("kafka.test.producer.rate"), TimeUnit.MICROSECONDS)) {
       
       if (!tuples.hasNext) tuples = Source.fromFile(Helper.getConfig().getString("kafka.test.producer.datafile")).getLines()
       val message = tuples.next()

@@ -204,14 +204,6 @@ function initialize() {
                 qo = uiState.catalog.queries.list[sse.name];
             }
 
-            // console.log(qi);
-            // check for first output
-            // if (qo.output === undefined){
-            //     // first output
-            //     qo.output = [];
-            // }
-
-            
             if (qo !== undefined){
 
                 if (qo.outputObjects === undefined){
@@ -348,7 +340,7 @@ function initialize() {
                draggable: false,
                editable: false,
                 fillColor: _color,
-                fillOpacity: 0.5,
+                fillOpacity: 0.12,
                 strokeWeight: 1
             };
 
@@ -709,7 +701,39 @@ function createOutputTupleListEntry(sse,qo){
         gmap.panTo(new google.maps.LatLng(sse.point.lat,sse.point.lng));
         gmap.setZoom(10);
     });
-    var iconCol = $("<span class='col-md-2'></span>").append(iconElem);
+    
+    var scolor = "white";
+    var vnegre = /\[Very Negative\]/
+    var negre = /\[Negative\]/
+    var vposre = /\[Very Positive\]/
+    var posre = /\[Positive\]/
+    var neutre = /\[Neutral\]/
+
+    if(negre.test(sse.text)){
+        // console.log("Negative");
+        scolor = "rgba(255,0,0,0.5)";
+    }
+
+    if(posre.test(sse.text)){
+        // console.log("Positive");
+        scolor = "rgba(0,255,0,0.5)";
+    }
+
+    if(vnegre.test(sse.text)){
+        // console.log("Very Negative");
+        scolor = "rgba(255,0,0,1)";
+    }
+
+    if(vposre.test(sse.text)){
+        // console.log("Very Positive");
+        scolor = "rgba(0,255,0,1)";
+    }
+
+    if(neutre.test(sse.text)){
+        console.log("Neutral");
+    }
+
+    var iconCol = $("<span class='col-md-2' style='background-color:"+scolor+";'></span>").append(iconElem);
     var textCol = $("<p class='col-md-8' style='word-wrap:break-word;overflow-x:scroll;'>"+sse.text+"</p>");
     var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
     var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);

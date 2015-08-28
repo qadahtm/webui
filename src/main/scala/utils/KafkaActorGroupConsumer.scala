@@ -96,8 +96,10 @@ class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with Ac
 //      }
 //    }
   
-  this.context.system.scheduler.scheduleOnce( 500 milliseconds, self, "checkMessages")
-  this.context.system.scheduler.schedule( 1000 milliseconds,  2000 milliseconds, self, "printCounts")
+  this.context.system.scheduler.scheduleOnce( Helper.getConfig().getInt("kafka.consumer.actorCheckRate") milliseconds, self, "checkMessages")
+  this.context.system.scheduler.schedule( Helper.getConfig().getInt("kafka.consumer.statusUpdateRate") milliseconds,  
+                          Helper.getConfig().getInt("kafka.consumer.statusUpdateRate") milliseconds, self, "printCounts")
+  
   var lastMessage = ""
   
   def receive = {
@@ -121,7 +123,7 @@ class KafkaPubSub(zk: String, cgid: String, topic: String) extends Actor with Ac
         log.info("no messages = "+localSubs.size)
       }
       
-      this.context.system.scheduler.scheduleOnce( 100 milliseconds, self, "checkMessages")
+      this.context.system.scheduler.scheduleOnce(  Helper.getConfig().getInt("kafka.consumer.actorCheckRate") milliseconds, self, "checkMessages")
     }
     
     case SubscribeStreamer(aref) => {
