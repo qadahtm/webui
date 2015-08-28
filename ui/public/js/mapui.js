@@ -703,9 +703,9 @@ function createOutputTupleListEntry(sse,qo){
     });
     
     var scolor = "white";
-    var vnegre = /\[Very Negative\]/
+    var vnegre = /\[Very negative\]/
     var negre = /\[Negative\]/
-    var vposre = /\[Very Positive\]/
+    var vposre = /\[Very positive\]/
     var posre = /\[Positive\]/
     var neutre = /\[Neutral\]/
 
