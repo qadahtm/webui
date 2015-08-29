@@ -703,40 +703,67 @@ function createOutputTupleListEntry(sse,qo){
     });
     
     var scolor = "white";
+    var bcolor = "white";
+    var fcolor = "#000000";
+    var eclass = "";
+    var brcolor = "#ddd";
+
     var vnegre = /\[Very negative\]/
     var negre = /\[Negative\]/
     var vposre = /\[Very positive\]/
     var posre = /\[Positive\]/
     var neutre = /\[Neutral\]/
+    
+    if(vposre.test(sse.text)){
+        // console.log("Very Positive");
+        // scolor = "rgba(0,255,0,1)";        
+        bcolor = "#7DCF68";
+        fcolor = "#1B5F09";
+        brcolor = "#1B5F09"; // border color
 
-    if(negre.test(sse.text)){
-        // console.log("Negative");
-        scolor = "rgba(255,0,0,0.5)";
     }
 
     if(posre.test(sse.text)){
         // console.log("Positive");
-        scolor = "rgba(0,255,0,0.5)";
+        // scolor = "rgba(0,255,0,0.5)";
+        bcolor = "#A4E394"
+        fcolor = "#1B5F09";
+        brcolor = "#1B5F09"; // border color
     }
+
+    if(negre.test(sse.text)){
+        // console.log("Negative");
+        // scolor = "rgba(255,0,0,0.5)";
+        bcolor = "#FDD5D7";
+        fcolor = "#B8494F";
+        brcolor = "#B8494F"; // border color
+    }
+
+    
 
     if(vnegre.test(sse.text)){
         // console.log("Very Negative");
-        scolor = "rgba(255,0,0,1)";
+        // scolor = "rgba(255,0,0,1)";
+        bcolor = "#FBB4B8";
+        fcolor = "#B8494F";
+        brcolor = "#B8494F"; // border color
     }
 
-    if(vposre.test(sse.text)){
-        // console.log("Very Positive");
-        scolor = "rgba(0,255,0,1)";
-    }
+    
 
     if(neutre.test(sse.text)){
-        console.log("Neutral");
+        // console.log("Neutral");
+        bcolor = "#A7A7A7";
+        // fcolor = "#7D151A";
+        // brcolor = "#ddd"; // border color
     }
 
-    var iconCol = $("<span class='col-md-2' style='background-color:"+scolor+";'></span>").append(iconElem);
-    var textCol = $("<p class='col-md-8' style='word-wrap:break-word;overflow-x:scroll;'>"+sse.text+"</p>");
+    // var iconCol = $("<span class='col-md-2' style='background-color:"+scolor+";'></span>").append(iconElem);
+    var iconCol = $("<span class='col-md-2' class='"+eclass+"'></span>").append(iconElem);
+    // var textCol = $("<p class='col-md-8' style='word-wrap:break-word;overflow-x:scroll;'>"+sse.text+"</p>");
+    var textCol = $("<p class='col-md-8' style='word-wrap:break-word;'>"+sse.text+"</p>");
     var tupleentry = $("<div class='row'></div>").append(iconCol).append(textCol);
-    var listitem = $("<li class='list-group-item' ></li>").append(tupleentry);
+    var listitem = $("<li class='list-group-item' style='background-color:"+bcolor+";color:"+fcolor+";border-color:"+brcolor+";' ></li>").append(tupleentry);
 
     return listitem;
 }
