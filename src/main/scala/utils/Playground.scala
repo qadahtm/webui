@@ -54,28 +54,33 @@ object Playground {
     
     // find max bounds
     
-    val source = scala.io.Source.fromFile("data/PartitionsJSON_LargDataFile.txt")
-    val arr = source.getLines().take(1).next()
-    val p = JsonParser(arr).asInstanceOf[JsArray];
-    var maxLat:Double = -90;
-    var minLat:Double = 90;
-    var maxLng:Double = -180;
-    var minLng:Double = 180;
+//    val source = scala.io.Source.fromFile("data/PartitionsJSON_LargDataFile.txt")
+//    val arr = source.getLines().take(1).next()
+//    val p = JsonParser(arr).asInstanceOf[JsArray];
+//    var maxLat:Double = -90;
+//    var minLat:Double = 90;
+//    var maxLng:Double = -180;
+//    var minLng:Double = 180;
+//    
+//    p.elements.foreach { x => {
+//      val cmaxlat = x.asJsObject.fields.get("north").get.asInstanceOf[JsNumber].value.toDouble
+//      val cminlat = x.asJsObject.fields.get("south").get.asInstanceOf[JsNumber].value.toDouble
+//      val cmaxlng = x.asJsObject.fields.get("east").get.asInstanceOf[JsNumber].value.toDouble
+//      val cminlng = x.asJsObject.fields.get("west").get.asInstanceOf[JsNumber].value.toDouble
+//      
+//      if (cmaxlat > maxLat) maxLat = cmaxlat;
+//      if (cminlat < minLat) minLat = cminlat;
+//      if (cmaxlng > maxLng) maxLng = cmaxlng;
+//      if (cminlng < minLng) minLng = cminlat;
+//      
+//    } }
+//    
+//    println("maxLat,minLat,maxLng,minLng = "+Array(maxLat,minLat,maxLng,minLng).mkString(","))        
     
-    p.elements.foreach { x => {
-      val cmaxlat = x.asJsObject.fields.get("north").get.asInstanceOf[JsNumber].value.toDouble
-      val cminlat = x.asJsObject.fields.get("south").get.asInstanceOf[JsNumber].value.toDouble
-      val cmaxlng = x.asJsObject.fields.get("east").get.asInstanceOf[JsNumber].value.toDouble
-      val cminlng = x.asJsObject.fields.get("west").get.asInstanceOf[JsNumber].value.toDouble
-      
-      if (cmaxlat > maxLat) maxLat = cmaxlat;
-      if (cminlat < minLat) minLat = cminlat;
-      if (cmaxlng > maxLng) maxLng = cmaxlng;
-      if (cminlng < minLng) minLng = cminlat;
-      
-    } }
     
-    println("maxLat,minLat,maxLng,minLng = "+Array(maxLat,minLat,maxLng,minLng).mkString(","))        
+    val spatial = Array("Overlap")
+    
+    
   }
   
 //  object KNNOrdering extends Ordering[(String,String)] {

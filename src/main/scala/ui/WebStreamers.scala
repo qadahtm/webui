@@ -311,6 +311,7 @@ class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) ex
   peer ! ChunkedResponseStart(responseStart).withAck(Ready)
 
   implicit val ec = this.context.system.dispatcher
+ 
 
   def receive = {
     case Ready => {
@@ -320,22 +321,32 @@ class RandomPointWithTextStreamer(peer: ActorRef, EventStreamType: MediaType) ex
       val qn = Catalog.json_cqueries.keys.size
       if (qn > 0) {
         val qname = Catalog.json_cqueries.keys.toList(scala.util.Random.nextInt(qn))
-        val cv = Catalog.json_cqueries.get(qname).get.fields.get("currentView").get
+        val qo = Catalog.json_cqueries.get(qname).get
+        
+        val cv = qo.fields.get("currentView").get
         val qcolor = Catalog.json_cqueries.get(qname).get.fields.get("outputColor").get
         val bounds = cv.asJsObject.getFields("north", "west", "south", "east").map { _.asInstanceOf[JsNumber].value }
         val rlng = bounds(1).toDouble + (scala.math.abs(bounds(3).toDouble - bounds(1).toDouble) * scala.util.Random.nextDouble())
         val rlat = bounds(2).toDouble + (scala.math.abs(bounds(0).toDouble - bounds(2).toDouble) * scala.util.Random.nextDouble())
 
         var txt= ""
+        var oid = ""
         if (data.hasNext) {
-          txt = data.next().split(",")(5)
+          val arr = data.next().split(",")
+          txt = arr(5)
+          oid = arr(0)
         }
         else {
           data =  scala.io.Source.fromFile(sampleTweetsFile).getLines()
+          val arr = data.next().split(",")
+          txt = arr(5)
+          oid = arr(0)
         }
         
         val resp = JsObject("name" -> JsString(qname),
           "type" -> JsString("output"),
+          "oid" -> JsString(oid),
+          "tag" -> JsString("+"),
           "outputColor" -> qcolor,
           "point" -> JsObject("lat" -> JsNumber(rlat), "lng" -> JsNumber(rlng)),
           "text" -> JsString(txt))

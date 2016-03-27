@@ -127,7 +127,7 @@ var drawingOptions = {
         position: google.maps.ControlPosition.TOP_CENTER,
         drawingModes: [
             // google.maps.drawing.OverlayType.CIRCLE,
-            // google.maps.drawing.OverlayType.POLYGON,
+            google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.MARKER,
             google.maps.drawing.OverlayType.RECTANGLE
         ]
@@ -204,6 +204,7 @@ function initialize() {
                 qo = uiState.catalog.queries.list[sse.name];
             }
 
+
             if (qo !== undefined){
 
                 if (qo.outputObjects === undefined){
@@ -214,6 +215,7 @@ function initialize() {
                     // single tuple
                     //console.log(qo.outputObjects[sse.oid]);
                     if (sse.tag !== undefined){
+                        console.log(sse.tag);
                         if (sse.tag === "+"){
                             addOutputObject(sse, qo);
                         }
@@ -233,6 +235,8 @@ function initialize() {
                     }
                     else {
                         //do nothing
+                        console.log($.toJSON(sse)); 
+                        addOutputObject(sse, qo);
                     }
                     
                 }

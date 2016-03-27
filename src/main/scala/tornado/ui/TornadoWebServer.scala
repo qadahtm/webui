@@ -212,6 +212,17 @@ object TornadoWebserver extends App with SimpleRoutingApp {
       }
   }
   
+  def findOperator(plan:JsObject, oname:String):JsObject = {
+    if (plan.fields.get("type").get.asInstanceOf[JsString].value == oname) {
+      plan
+    }
+    else {
+      // return first (leftmost) child matching type name
+      val des = plan.fields.get("children").get.asInstanceOf[JsArray].elements.map(x => findOperator(x.asJsObject,oname))
+      des.head      
+    }
+  }
+  
   val tornado_queries = path("tornado" / "queries") {
       get {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
@@ -224,6 +235,10 @@ object TornadoWebserver extends App with SimpleRoutingApp {
           val jo = JsonParser(jstr)
 //          log.info("received request, entity = " + jo.prettyPrint)
           log.info(jo.prettyPrint)
+          
+          val selectOp = findOperator(jo.asJsObject.fields.get("plan").get.asJsObject,"select")
+//          log.info(rangePred.prettyPrint) 
+        
           val qname = jo.asJsObject.fields.get("name").get.asInstanceOf[JsString].value
           
             jo.asJsObject.fields.get("type") match {
