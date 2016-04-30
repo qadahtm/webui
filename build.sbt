@@ -1,6 +1,6 @@
 import AssemblyKeys._
 
-name := "TornadoWebUI"
+name := "CruncherWebUI"
 
 version := "0.1"
 
@@ -12,6 +12,7 @@ seq(
         // [Optional] Specify mappings from program name -> Main class (full package path)
         packMain := Map(
         "WebServer" -> "ui.Webserver"
+        ,"CruncherUI" -> "cruncher.ui.CruncherWebserver"
         ,"TornadoUI" -> "tornado.ui.TornadoWebserver"
         ,"TwitterHBCExample" -> "examples.TwitterHBCExample"
         ,"Twitter4JExample" -> "tornado.examples.TwitterStreamAPI"
@@ -19,7 +20,8 @@ seq(
         ,"TestRandomTextGen" -> "tornado.ui.TestRandomTextGen"
         ,"StreamConroller" -> "utils.StreamController"    
         ,"KafkaFileProducer" -> "utils.KafkaFileProducer"
-        ,"Playground" -> "utils.Playground"    
+        ,"Playground" -> "utils.Playground"
+        ,"MockupSparkApp" -> "utils.MockSparkApp"    
 	),
         // Add custom settings here
         // [Optional] JVM options of scripts (program name -> Seq(JVM option, ...))

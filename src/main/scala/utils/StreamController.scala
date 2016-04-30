@@ -19,6 +19,7 @@ import akka.util.ByteStringBuilder
 import java.nio.charset.Charset
 import java.nio.charset.MalformedInputException
 import java.nio.charset.CodingErrorAction
+import cruncher.ui.CruncherDataBuffer
 
 /**
  * Testing Network controllers as the following example:
@@ -131,6 +132,34 @@ class NetworkSocketControllerServer(filepath: String, host: String, port: Int, i
 
 }
 
+class NetworkSocketDataBufferServer(host: String, port: Int, localconn:ActorRef) extends Actor with ActorLogging {
+
+  import Tcp._
+  import context.system
+
+  IO(Tcp) ! Bind(self, new InetSocketAddress(host, port))
+  
+  def receive = {
+    case b @ Bound(localAddress) => {
+      log.info("Bound to : " + localAddress.toString())
+    }
+
+    case CommandFailed(_: Bind) => { context stop self }
+
+    case c @ Connected(remote, local) =>
+      {
+        val remoteconn = sender
+        
+        val handler = context.actorOf(Props(classOf[DataBufferHandler], remoteconn, localconn))        
+        remoteconn ! Register(handler)
+        log.info("Connected to Spark App at : " + remote.toString())
+        
+      }
+    case _ => log.info("got something")
+  }
+
+}
+
 object RemoveMe
 case class ChangeCount(newCount:Int)
 
@@ -204,6 +233,57 @@ class SimplisticHandler(fp:String, icount: Int, period: Int, remote: ActorRef) e
     }
   }
 }
+
+
+class DataBufferHandler(remote: ActorRef, localconn:ActorRef) extends Actor with ActorLogging {
+
+  import Tcp._
+
+  implicit val ec = context.system.dispatcher
+  var queriesSentCount:Long = 0
+  var tuplesReceivedCount:Long = 0
+  
+  val s = context.system.scheduler.schedule(0 seconds, 1 seconds) {
+    self ! "sendout"
+  }
+  
+  def receive = {
+    case Received(data) => {
+     
+      val res = data.decodeString("UTF-8")
+//      log.info("received from sparkApp:"+res)
+      CruncherDataBuffer.addOutput(res) // buffer output
+      localconn ! Forward(res)      
+      
+      tuplesReceivedCount = tuplesReceivedCount + 1
+
+    }
+    case PeerClosed => {
+      log.info("Client Teminated, killing myself")  
+      log.info(s"Tuples received count = ${tuplesReceivedCount}, Queries Sent count = ${queriesSentCount}")
+      s.cancel
+      context stop self
+    }
+    
+    case "sendout" =>{
+      if (CruncherDataBuffer.queryQueue.size() > 0){
+        log.info("found a new queries")
+        val q = CruncherDataBuffer.getQuerySync() +"\n"
+        val bsb = new ByteStringBuilder() 
+        bsb.putBytes(q.getBytes())
+        remote ! Write(bsb.result())     
+        bsb.clear()
+        queriesSentCount  = queriesSentCount +1
+      }
+//      else{
+//        log.info("No new queries")
+//      }
+    }
+    
+  }
+}
+
+case class QueryJSONString(q:String)
 
 class KafkaTopicController(filepath: String, count: Int, topic: String) extends Actor with ActorLogging {
 
