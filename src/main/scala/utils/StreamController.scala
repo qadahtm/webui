@@ -267,7 +267,7 @@ class DataBufferHandler(remote: ActorRef, localconn:ActorRef) extends Actor with
     
     case "sendout" =>{
       if (CruncherDataBuffer.queryQueue.size() > 0){
-        log.info("found a new queries")
+//        log.info("found a new queries")
         val q = CruncherDataBuffer.getQuerySync() +"\n"
         val bsb = new ByteStringBuilder() 
         bsb.putBytes(q.getBytes())

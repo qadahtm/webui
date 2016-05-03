@@ -71,7 +71,6 @@ import spray.json.JsonParser
 import com.turn.platform.cheetah.partitioning.horizontal._
 import scala.io.Source
 import ui._
-import ui.KafkaTopicStreamer
 import spray.http.StatusCodes
 import org.apache.kafka.clients.producer.ProducerRecord
 import spray.json.JsBoolean
@@ -103,7 +102,7 @@ object CruncherWebserver extends App with SimpleRoutingApp {
   log.info("created result pubsub service at : " + resultPubSubActor.path)
   
   
-  val sparkAppMediator = asystem.actorOf(Props(classOf[NetworkSocketDataBufferServer], "localhost", 9981,resultPubSubActor), "sparkappmed")
+  val sparkAppMediator = asystem.actorOf(Props(classOf[NetworkSocketDataBufferServer], "localhost", 2016,resultPubSubActor), "sparkappmed")
   
   val EventStreamType = register(
     MediaType.custom(
