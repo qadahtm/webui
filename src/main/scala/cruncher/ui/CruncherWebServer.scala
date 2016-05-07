@@ -134,9 +134,16 @@ object CruncherWebserver extends App with SimpleRoutingApp {
     path("datasources") {
       get {
         complete(HttpResponse(entity = HttpEntity(MediaTypes.`application/json`,
-          JsArray(JsObject("sourceName" -> JsString("Tweets")),
-            JsObject("sourceName" -> JsString("POI_Data")),
-            JsObject("sourceName" -> JsString("MovingObjects"))).toString)))
+          JsArray(JsObject("sourceName" -> JsString("Tweets"),
+              "desc" -> JsString("Stream of tweets (Online Data)"),
+              "dm" -> JsString("(id,location,text,timestamp)")),
+            JsObject("sourceName" -> JsString("POI_Data"), 
+                "desc" -> JsString("Points of Interests (Offline Data)"),
+                "dm" -> JsString("(id,location,text,category)"))
+            ).toString
+            )
+            )
+            )
       }
     }
   }

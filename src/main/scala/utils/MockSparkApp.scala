@@ -141,13 +141,19 @@ object MockSparkStreamingApp extends App {
             "text" -> JsString(txt))
 
           output_out.println(resp.toString())
+          println("TESTING --================================")
 
+        } catch {
+          case t: Throwable => {
+            
+            println("TESTING --=============EXCEPTION==================")
+            t.printStackTrace()
+          }
+        }
+        
           output_out.flush()
           output_out.close()
           uisocket.close()
-        } catch {
-          case t: Throwable => None
-        }
       }
     }
 

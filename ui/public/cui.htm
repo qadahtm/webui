@@ -68,7 +68,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Cruncher UI</a>
+          <a class="navbar-brand " style="font-size:20pt" href="#">Cruncher UI</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
@@ -87,7 +87,7 @@
                 <li><a id="jqex" href="#">Join query example</a></li>
               </ul>
             </li>
-            <li><a href="adaptiveIndex.htm?urate=900">Adaptive Index</a></li>
+            <!-- <li><a href="adaptiveIndex.htm?urate=900">Adaptive Index</a></li> -->
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -106,11 +106,14 @@
           
         </div>
     </div>
+
     <div id="queryInput" class="row collapse in bg-pu-gold-dark" >
       <div class="">
         <div class="col-md-7">
           <div class="row">
+            <button class="btn btn-default">SQL Query</button>
             <div class="panel">
+
             <div id="textEntry">
               <textarea id="textData" >REGISTER QUERY q1 AS
 SELECT * FROM Tweets AS T
@@ -135,8 +138,8 @@ and INSIDE(T.loc,@r0);</textarea>
         <div class="col-md-5">
           <div class="row">
             <div class="col-md-12">
-              <div id="regDatasources" class="col-md-6">
-                <h5 >Registered Data Sources</h5>
+              <div id="regDatasources" class="col-md-12">
+                <button class="btn btn-default" >Registered Data Sources</button>
                 <ul class="list-group">
                   <li class="list-group-item">No registered Data sources</li>
                 </ul>
@@ -146,13 +149,13 @@ and INSIDE(T.loc,@r0);</textarea>
           <div class="row">
             <div class="col-md-12">
               <div class="predicateList col-md-6">
-                  <h5>Focal points</h5>
+                  <button class="btn btn-default">Focal points</button>
                   <ul id="knnList" class="list-group">
                       <li class="list-group-item"> No points</li>
                   </ul>
               </div>
               <div class="predicateList col-md-6">
-                  <h5>Range predicates</h5>
+                  <button class="btn btn-default">Range predicates</button>
                   <ul id="rangeList" class="list-group">
                       <li class="list-group-item">No predicates</li>
                   </ul>
@@ -185,13 +188,10 @@ and INSIDE(T.loc,@r0);</textarea>
 
       <div class="hidden row">
       <div class="panel panel-default">
-        <div class="panel-body" >
-          
+        <div class="panel-body">          
           <div id="dialog-ast" class="hidden col-md-12" title="Parse Tree">
               <div id="prettyPrint" class="jsDump"></div> 
-
           </div>
-
           <div id="visholder" class="hidden col-md-12"></div>  
         </div>
       </div>
@@ -200,23 +200,22 @@ SELECT * FROM Tweets AS T
 WHERE SEMANTIC(T.text,"food")
 and INSIDE(T.loc,@r0);
       </div>
-        <div id="rq1r0">REGISTER QUERY rq1 AS
+        <div id="rq1r0">REGISTER QUERY ##qid## AS
 SELECT * FROM Tweets AS T
 WHERE OVERLAPS(T.text,"food")
-and INSIDE(T.loc,@r0);
-      </div>
-      <div id="rjq2r0">REGISTER QUERY rjq AS
+and INSIDE(T.loc,@r0);</div>
+      <div id="rjq2r0">REGISTER QUERY ##qid## AS
 SELECT * FROM POI_Data AS O, Tweets AS T
 WHERE WITHIN_DISTANCE(O.loc,T.loc,10)
 and INSIDE(T.loc,@r0)
 and OVERLAPS(O.text, T.text)
 and CONTAINS(T.text, "love");</div>
-<div id="knnqf0">REGISTER QUERY knnq1 AS
+<div id="knnqf0">REGISTER QUERY ##qid##  AS
 SELECT * FROM Tweets AS T
 WHERE OVERLAPS(T.text,"food")
 and KNN(T.loc,@f0,10);
       </div>
-      <div id="knnjq">REGISTER QUERY knnjq AS
+      <div id="knnjq">REGISTER QUERY ##qid## AS
 SELECT * FROM POI_Data AS O, Tweets AS T
 WHERE KNN(O.loc,T.loc,10)
 and OVERLAPS(O.text, T.text)

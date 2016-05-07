@@ -397,8 +397,12 @@ function populateDataSources(){
 
       $.each( data, function( key, val ) {
         //console.log(key);
-        //console.log(val);
-        target.append( "<li id='" + key + "' class='list-group-item' >" + val.sourceName + "</li>" );
+        console.log(val);
+        var divid = "desc"+key
+        var a = "<a data-toggle=\"collapse\" href='#"+divid+"'  aria-expanded='false' aria-controls='"+divid+"' >" + val.sourceName + "</a>"
+        var sname =$("<li id='" + key + "' class='list-group-item' ></li>");
+        var desc = "<div class='collapse' id='"+divid+"'><span><h6>Type:</h6>"+val.desc+"</span><br /><span> <h6>Data Model:</h6>"+val.dm+"</span></div> ";
+        target.append( sname.append(a).append(desc));
       });     
     });
 }
@@ -464,6 +468,15 @@ function addOutputObject(sse, qo){
         console.log("warning : + for oid that already exist in state");
     }
 
+}
+
+var queryIds = [0,0,0];
+
+function getQueryIdSuffix(qtype){
+    var res = ++queryIds[qtype];
+    console.log(res);
+    queryIds[qtype] = res;
+    return res;
 }
 
 function addOutputObjectPair(sse, qo){
@@ -1091,11 +1104,15 @@ $(document).ready(function () {
     // set examples menu
     $('#rqex1').click(function(){
         // console.log(uiState.editor.getDoc().getValue());
-        uiState.editor.getDoc().setValue($('#rq1r0').text());           
+        
+        var res = $('#rq1r0').text().replace("##qid##", "rq"+getQueryIdSuffix(0));
+        uiState.editor.getDoc().setValue(res);           
     });
 
     $('#knnqex1').click(function(){
-        uiState.editor.getDoc().setValue($('#knnqf0').text());    
+        var res = $('#knnqf0').text().replace("##qid##", "knnq"+getQueryIdSuffix(1));
+        uiState.editor.getDoc().setValue(res);
+        //uiState.editor.getDoc().setValue($('#knnqf0').text());    
     });
 
     $('#knnqex2').click(function(){
@@ -1103,7 +1120,9 @@ $(document).ready(function () {
     });
 
     $('#jqex').click(function(){
-        uiState.editor.getDoc().setValue($('#rjq2r0').text());    
+        var res = $('#rjq2r0').text().replace("##qid##", "jq"+getQueryIdSuffix(2));
+        uiState.editor.getDoc().setValue(res);
+        // uiState.editor.getDoc().setValue($('#rjq2r0').text());    
     });
 
 
