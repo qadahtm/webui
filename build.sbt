@@ -47,8 +47,10 @@ resolvers ++= Seq(
 )
 
 resolvers += Resolver.mavenLocal
-resolvers += “conjars.org” at “http://conjars.org/repo”
-resolvers += “clojars” at “https://clojars.org/repo”
+resolvers += "conjars.org" at "http://conjars.org/repo"
+resolvers += "clojars" at "https://clojars.org/repo"
+
+
 libraryDependencies ++= Seq(
   "com.typesafe.akka"  %% "akka-actor"       % "2.3.6",
   "com.typesafe.akka"  %% "akka-slf4j"       % "2.3.6",
